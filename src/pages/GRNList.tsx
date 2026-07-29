@@ -74,12 +74,12 @@ export function GRNList() {
             {grns.map((g) => (
               <tr key={g.id} className="border-b border-gray-50">
                 <td className="px-5 py-2">
-                  <a href={g.file_url} target="_blank" rel="noreferrer" className="font-medium text-brand">{g.invoice_number ?? "(no invoice #)"}</a>
+                  <Link to={`/grns/${g.id}`} className="font-medium text-brand hover:underline">{g.invoice_number ?? "(no invoice #)"}</Link>
                 </td>
                 <td className="px-5 py-2">{g.branch_name}</td>
-                <td className="px-5 py-2">{g.vendor_name ?? "—"}</td>
+                <td className="px-5 py-2">{g.vendor_name ?? "-"}</td>
                 <td className="px-5 py-2">{g.po_number ?? "Off-PO"}</td>
-                <td className="px-5 py-2">{g.received_date?.slice(0, 10) ?? "—"}</td>
+                <td className="px-5 py-2">{g.received_date?.slice(0, 10) ?? "-"}</td>
                 <td className="px-5 py-2">
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[g.ocr_status] ?? ""}`}>
                     {g.ocr_status.replace("_", " ")}

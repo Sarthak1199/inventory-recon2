@@ -5,6 +5,7 @@ import { requireAuth, type AuthedRequest } from "../middleware/auth.js";
 import { uploadCsv } from "../middleware/upload.js";
 import { getAccountItems, matchItemName } from "../services/matching.js";
 import { generatePoNumber } from "../lib/poNumber.js";
+import { buildPoWhatsAppMessage, buildWaLink } from "../services/waTemplates.js";
 
 export const purchaseOrdersRouter = Router();
 
@@ -158,16 +159,13 @@ purchaseOrdersRouter.post("/:id/send", requireAuth, async (req: AuthedRequest, r
   );
 
   const total = linesRes.rows.reduce((s: number, l: any) => s + Number(l.ordered_amount), 0);
-  const lineText = linesRes.rows
-    .map((l: any) => `- ${l.name}: ${l.ordered_qty} ${l.unit} x Rs.${l.unit_price} = Rs.${l.ordered_amount}`)
-    .join("\n");
-  const message =
-    `Purchase Order ${po.po_number}\n\n${lineText}\n\n` +
-    `Total: Rs.${total.toFixed(2)}\n` +
-    (po.expected_delivery_date ? `Expected delivery: ${po.expected_delivery_date}\n` : "");
-
-  const digits = (po.whatsapp_number ?? "").replace(/[^0-9]/g, "");
-  const waLink = digits ? `https://wa.me/${digits}?text=${encodeURIComponent(message)}` : null;
+  const message = buildPoWhatsAppMessage({
+    poNumber: po.po_number,
+    lines: linesRes.rows,
+    total,
+    expectedDeliveryDate: po.expected_delivery_date ? new Date(po.expected_delivery_date).toISOString().slice(0, 10) : null,
+  });
+  const waLink = buildWaLink(po.whatsapp_number, message);
 
   await pool.query(
     `UPDATE purchase_orders SET status = CASE WHEN status = 'draft' THEN 'sent' ELSE status END, sent_at = now() WHERE id = $1`,

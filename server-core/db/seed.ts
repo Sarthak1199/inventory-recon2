@@ -111,7 +111,7 @@ async function seed() {
 
   await recomputePoComparison(po1Id);
 
-  // PO-KOR-0002: still in transit, no GRN yet — shows up as Pending in the on-time KPI.
+  // PO-KOR-0002: still in transit, no GRN yet. Shows up as Pending in the on-time KPI.
   const po2 = await pool.query(
     `INSERT INTO purchase_orders (account_id, po_number, branch_id, vendor_id, created_by, expected_delivery_date, status, sent_at, total_amount)
      VALUES ($1, 'PO-KOR-0002', $2, $3, $4, $5, 'sent', now() - interval '1 day', 0) RETURNING id`,

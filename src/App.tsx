@@ -10,6 +10,8 @@ import { CreatePO } from "./pages/CreatePO";
 import { PODetail } from "./pages/PODetail";
 import { GRNUpload } from "./pages/GRNUpload";
 import { GRNList } from "./pages/GRNList";
+import { GRNDetail } from "./pages/GRNDetail";
+import { Settings } from "./pages/Settings";
 
 function App() {
   return (
@@ -30,6 +32,8 @@ function App() {
         <Route path="/purchase-orders/:id" element={<PODetail />} />
         <Route path="/grns" element={<GRNList />} />
         <Route path="/grns/upload" element={<GRNUpload />} />
+        <Route path="/grns/:id" element={<GRNDetail />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

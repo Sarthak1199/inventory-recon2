@@ -72,7 +72,7 @@ export function Onboarding() {
     <div className="mx-auto max-w-2xl space-y-8">
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Set up your workspace</h1>
-        <p className="text-sm text-gray-500">Branding, items, and vendors — you can always add more later.</p>
+        <p className="text-sm text-gray-500">Branding, items, and vendors. You can always add more later from Settings.</p>
       </div>
 
       {status && <div className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">{status}</div>}

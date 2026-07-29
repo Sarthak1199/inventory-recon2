@@ -2,5 +2,10 @@
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/handler" },
     { "source": "/((?!api/).*)", "destination": "/" }
-  ]
+  ],
+  "functions": {
+    "api/handler.ts": {
+      "maxDuration": 60
+    }
+  }
 }

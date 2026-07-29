@@ -1,4 +1,4 @@
--- Restaurant Procurement & GRN Reconciliation Platform — schema
+-- Restaurant Procurement & GRN Reconciliation Platform - schema
 
 CREATE TABLE IF NOT EXISTS accounts (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),

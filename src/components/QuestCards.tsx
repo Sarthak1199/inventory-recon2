@@ -16,8 +16,8 @@ interface QuestStatus {
 }
 
 const CTA: Record<string, { label: string; to: string }> = {
-  vendor: { label: "Add vendor", to: "/onboarding" },
-  item: { label: "Add items", to: "/onboarding" },
+  vendor: { label: "Add vendor", to: "/settings" },
+  item: { label: "Add items", to: "/settings" },
   po: { label: "Create PO", to: "/purchase-orders/new" },
   grn: { label: "Upload GRN", to: "/grns/upload" },
 };
@@ -46,7 +46,7 @@ export function QuestCards() {
         }}
         className="mb-6 rounded-full border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
       >
-        Setup {status.doneCount}/{status.total} done — reopen
+        Setup {status.doneCount}/{status.total} done, reopen
       </button>
     );
   }
@@ -71,7 +71,7 @@ export function QuestCards() {
   return (
     <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-900">Get started — {status.doneCount}/{status.total} done</h2>
+        <h2 className="text-sm font-semibold text-gray-900">Get started ({status.doneCount}/{status.total} done)</h2>
         <button
           onClick={async () => {
             await api.post("/onboarding/quest-dismiss");

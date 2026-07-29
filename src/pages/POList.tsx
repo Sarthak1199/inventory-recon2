@@ -113,7 +113,7 @@ export function POList() {
                     {po.status.replace("_", " ")}
                   </span>
                 </td>
-                <td className="px-5 py-2">{po.expected_delivery_date?.slice(0, 10) ?? "—"}</td>
+                <td className="px-5 py-2">{po.expected_delivery_date?.slice(0, 10) ?? "-"}</td>
                 <td className="px-5 py-2">₹{Number(po.total_amount).toLocaleString("en-IN")}</td>
               </tr>
             ))}

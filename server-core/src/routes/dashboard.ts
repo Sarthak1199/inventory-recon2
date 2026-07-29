@@ -134,5 +134,84 @@ dashboardRouter.get("/price-impact", requireAuth, async (req: AuthedRequest, res
     costImpact: Number(r.cost_impact),
   }));
 
+  const cogsWhere = buildFilters(req, "po");
+  const cogsRes = await pool.query(
+    `SELECT COALESCE(SUM(gl.received_amount), 0) AS total_cogs
+     FROM grn_lines gl
+     JOIN grns g ON g.id = gl.grn_id
+     LEFT JOIN po_lines pl ON pl.id = gl.po_line_id
+     LEFT JOIN purchase_orders po ON po.id = pl.po_id
+     WHERE g.ocr_status = 'confirmed' AND (
+       (gl.is_off_po = false AND ${cogsWhere.where})
+       OR (gl.is_off_po = true AND g.account_id = $1)
+     )`,
+    cogsWhere.params
+  );
+
+  res.json({ rows, totalCogs: Number(cogsRes.rows[0].total_cogs) });
+});
+
+dashboardRouter.get("/price-trend", requireAuth, async (req: AuthedRequest, res) => {
+  const { where, params } = buildFilters(req, "po");
+
+  const result = await pool.query(
+    `SELECT i.id AS item_id, i.name AS item_name,
+            date_trunc('week', g.received_date)::date AS week,
+            AVG(gl.unit_price) AS avg_price
+     FROM grn_lines gl
+     JOIN grns g ON g.id = gl.grn_id
+     JOIN po_lines pl ON pl.id = gl.po_line_id
+     JOIN purchase_orders po ON po.id = pl.po_id
+     JOIN items i ON i.id = pl.item_id
+     WHERE gl.is_off_po = false AND g.ocr_status = 'confirmed' AND g.received_date IS NOT NULL AND ${where}
+     GROUP BY i.id, i.name, week
+     ORDER BY week ASC`,
+    params
+  );
+
+  const weeksSet = new Set<string>();
+  const byItem = new Map<string, { itemName: string; points: Map<string, number> }>();
+  for (const r of result.rows) {
+    const week = r.week.toISOString().slice(0, 10);
+    weeksSet.add(week);
+    if (!byItem.has(r.item_id)) byItem.set(r.item_id, { itemName: r.item_name, points: new Map() });
+    byItem.get(r.item_id)!.points.set(week, Number(r.avg_price));
+  }
+
+  const weeks = Array.from(weeksSet).sort();
+  const series = weeks.map((week) => {
+    const point: Record<string, string | number> = { week };
+    for (const [, { itemName, points }] of byItem) {
+      if (points.has(week)) point[itemName] = points.get(week)!;
+    }
+    return point;
+  });
+  const itemNames = Array.from(byItem.values()).map((v) => v.itemName);
+
+  res.json({ series, itemNames });
+});
+
+dashboardRouter.get("/payables", requireAuth, async (req: AuthedRequest, res) => {
+  const { where, params } = buildFilters(req, "po");
+
+  const result = await pool.query(
+    `SELECT v.id AS vendor_id, v.name AS vendor_name,
+            COUNT(*)::int AS po_count,
+            COALESCE(SUM(po.total_amount), 0) AS amount_payable
+     FROM purchase_orders po
+     JOIN vendors v ON v.id = po.vendor_id
+     WHERE po.status IN ('sent', 'partially_received', 'received') AND ${where}
+     GROUP BY v.id, v.name
+     ORDER BY amount_payable DESC`,
+    params
+  );
+
+  const rows = result.rows.map((r: any) => ({
+    vendorId: r.vendor_id,
+    vendorName: r.vendor_name,
+    poCount: r.po_count,
+    amountPayable: Number(r.amount_payable),
+  }));
+
   res.json(rows);
 });

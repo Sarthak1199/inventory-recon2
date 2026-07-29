@@ -7,6 +7,7 @@ import { getAccountItems, matchItemName } from "../services/matching.js";
 import { findBestMatch } from "../lib/fuzzyMatch.js";
 import { recomputePoComparison } from "../services/gapEngine.js";
 import { saveUpload } from "../services/storage.js";
+import { buildGrnWhatsAppMessage, buildWaLink } from "../services/waTemplates.js";
 
 export const grnsRouter = Router();
 
@@ -127,18 +128,53 @@ grnsRouter.get("/", requireAuth, async (req: AuthedRequest, res) => {
 
 grnsRouter.get("/:id", requireAuth, async (req: AuthedRequest, res) => {
   const grnRes = await pool.query(
-    `SELECT g.*, po.po_number, b.name AS branch_name
-     FROM grns g LEFT JOIN purchase_orders po ON po.id = g.po_id JOIN branches b ON b.id = g.branch_id
+    `SELECT g.*, po.po_number, b.name AS branch_name, v.name AS vendor_name, v.whatsapp_number AS vendor_whatsapp
+     FROM grns g
+     LEFT JOIN purchase_orders po ON po.id = g.po_id
+     LEFT JOIN vendors v ON v.id = g.vendor_id
+     JOIN branches b ON b.id = g.branch_id
      WHERE g.id = $1 AND g.account_id = $2`,
     [req.params.id, req.user!.accountId]
   );
   if (grnRes.rowCount === 0) return res.status(404).json({ error: "GRN not found" });
 
   const linesRes = await pool.query(
-    `SELECT gl.*, i.name AS item_name FROM grn_lines gl LEFT JOIN items i ON i.id = gl.item_id WHERE gl.grn_id = $1`,
+    `SELECT gl.*, i.name AS item_name, i.unit FROM grn_lines gl LEFT JOIN items i ON i.id = gl.item_id WHERE gl.grn_id = $1`,
     [req.params.id]
   );
   res.json({ ...grnRes.rows[0], lines: linesRes.rows });
+});
+
+grnsRouter.post("/:id/share-wa", requireAuth, async (req: AuthedRequest, res) => {
+  const grnRes = await pool.query(
+    `SELECT g.invoice_number, g.received_date, po.po_number, v.name AS vendor_name, v.whatsapp_number
+     FROM grns g
+     LEFT JOIN purchase_orders po ON po.id = g.po_id
+     LEFT JOIN vendors v ON v.id = g.vendor_id
+     WHERE g.id = $1 AND g.account_id = $2`,
+    [req.params.id, req.user!.accountId]
+  );
+  if (grnRes.rowCount === 0) return res.status(404).json({ error: "GRN not found" });
+  const grn = grnRes.rows[0];
+
+  const linesRes = await pool.query(
+    `SELECT COALESCE(i.name, gl.raw_item_name) AS name, i.unit, gl.received_qty, gl.received_amount
+     FROM grn_lines gl LEFT JOIN items i ON i.id = gl.item_id WHERE gl.grn_id = $1`,
+    [req.params.id]
+  );
+
+  const total = linesRes.rows.reduce((s: number, l: any) => s + Number(l.received_amount), 0);
+  const message = buildGrnWhatsAppMessage({
+    invoiceNumber: grn.invoice_number,
+    vendorName: grn.vendor_name,
+    poNumber: grn.po_number,
+    receivedDate: grn.received_date ? new Date(grn.received_date).toISOString().slice(0, 10) : null,
+    lines: linesRes.rows.map((l: any) => ({ name: l.name ?? "Item", qty: l.received_qty, unit: l.unit ?? "" })),
+    total,
+  });
+  const waLink = buildWaLink(grn.whatsapp_number, message);
+
+  res.json({ waLink, message, vendorWhatsapp: grn.whatsapp_number ?? null });
 });
 
 grnsRouter.put("/:id/review", requireAuth, async (req: AuthedRequest, res) => {

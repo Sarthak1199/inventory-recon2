@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+import { AddVendorModal } from "../components/AddVendorModal";
 
 interface Vendor {
   id: string;
@@ -52,6 +53,7 @@ export function CreatePO() {
 
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvRows, setCsvRows] = useState<CsvRow[] | null>(null);
+  const [showAddVendor, setShowAddVendor] = useState(false);
 
   useEffect(() => {
     api.get("/vendors").then((res) => setVendors(res.data));
@@ -131,17 +133,35 @@ export function CreatePO() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      {showAddVendor && (
+        <AddVendorModal
+          onClose={() => setShowAddVendor(false)}
+          onCreated={(v) => {
+            setVendors((prev) => [...prev, v].sort((a, b) => a.name.localeCompare(b.name)));
+            setVendorId(v.id);
+          }}
+        />
+      )}
       <h1 className="text-xl font-semibold text-gray-900">Create Purchase Order</h1>
 
       <div className="grid grid-cols-1 gap-4 rounded-lg border border-gray-200 bg-white p-6 sm:grid-cols-2">
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Vendor</label>
-          <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
-            <option value="">Select vendor</option>
-            {vendors.map((v) => (
-              <option key={v.id} value={v.id}>{v.name}</option>
-            ))}
-          </select>
+          <div className="flex gap-2">
+            <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+              <option value="">Select vendor</option>
+              {vendors.map((v) => (
+                <option key={v.id} value={v.id}>{v.name}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => setShowAddVendor(true)}
+              className="shrink-0 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              + New
+            </button>
+          </div>
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Expected delivery date</label>
@@ -155,7 +175,7 @@ export function CreatePO() {
       </div>
 
       <div className="space-y-3 rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="font-medium text-gray-900">Add line items — CSV upload</h2>
+        <h2 className="font-medium text-gray-900">Add line items: CSV upload</h2>
         <p className="text-xs text-gray-500">Columns: item_name, qty, unit_price</p>
         <div className="flex items-center gap-2">
           <input type="file" accept=".csv" onChange={(e) => setCsvFile(e.target.files?.[0] ?? null)} className="text-sm" />
@@ -211,7 +231,7 @@ export function CreatePO() {
       </div>
 
       <div className="space-y-3 rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="font-medium text-gray-900">Add line items — manual entry</h2>
+        <h2 className="font-medium text-gray-900">Add line items: manual entry</h2>
         <input
           placeholder="Search item..."
           value={itemSearch}

@@ -56,6 +56,7 @@ export function PODetail() {
       const res = await api.post(`/purchase-orders/${id}/send`);
       setWaLink(res.data.waLink);
       setWaMessage(res.data.message);
+      if (res.data.waLink) window.open(res.data.waLink, "_blank");
       await load();
     } finally {
       setSending(false);
