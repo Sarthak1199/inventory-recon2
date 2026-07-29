@@ -4,7 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "lib": ["ES2022"],
-    "outDir": "dist",
+    "noEmit": true,
     "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
@@ -13,5 +13,5 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "db/**/*.ts", "api/**/*.ts"]
+  "include": ["server-core/src/**/*.ts", "server-core/db/**/*.ts", "api/**/*.ts"]
 }
