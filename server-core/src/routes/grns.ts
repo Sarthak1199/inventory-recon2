@@ -47,7 +47,14 @@ grnsRouter.post("/upload", requireAuth, uploadGrn.single("file"), async (req: Au
   const poId = req.body.poId || null;
   if (!branchId) return res.status(400).json({ error: "branchId is required" });
 
-  const fileUrl = await saveUpload("grns", req.file.originalname, req.file.buffer, req.file.mimetype);
+  let fileUrl: string;
+  try {
+    fileUrl = await saveUpload("grns", req.file.originalname, req.file.buffer, req.file.mimetype);
+  } catch (err) {
+    console.error("GRN file upload failed:", err);
+    return res.status(500).json({ error: "File storage failed", detail: err instanceof Error ? err.message : String(err) });
+  }
+
   const grnRes = await pool.query(
     `INSERT INTO grns (account_id, po_id, branch_id, file_url, ocr_status)
      VALUES ($1, $2, $3, $4, 'pending') RETURNING id`,
