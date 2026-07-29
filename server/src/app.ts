@@ -22,7 +22,7 @@ const isProduction = process.env.NODE_ENV === "production";
 export const app = express();
 app.set("trust proxy", 1);
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173", credentials: true }));
+app.use(cors({ origin: process.env.CLIENT_ORIGIN || true, credentials: true }));
 app.use(express.json());
 app.use(
   session({
@@ -33,7 +33,7 @@ app.use(
     cookie: {
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: isProduction ? "none" : "lax",
+      sameSite: "lax",
       secure: isProduction,
     },
   })
