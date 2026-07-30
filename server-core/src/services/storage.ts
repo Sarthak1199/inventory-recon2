@@ -4,7 +4,18 @@ import crypto from "node:crypto";
 
 const uploadsDir = process.env.UPLOADS_DIR ?? "./uploads";
 
-/** Uploads to Vercel Blob when BLOB_READ_WRITE_TOKEN is set (production); otherwise writes to local disk (dev). */
+/**
+ * Vercel names a Blob store's token env var after the store itself
+ * (e.g. BLOB_READ_WRITE_TOKEN, BLOB2_READ_WRITE_TOKEN) rather than always
+ * using a fixed name, so look for anything matching that pattern.
+ */
+function findBlobToken(): string | undefined {
+  if (process.env.BLOB_READ_WRITE_TOKEN) return process.env.BLOB_READ_WRITE_TOKEN;
+  const key = Object.keys(process.env).find((k) => /^BLOB.*_READ_WRITE_TOKEN$/.test(k));
+  return key ? process.env[key] : undefined;
+}
+
+/** Uploads to Vercel Blob when a blob read/write token is set (production); otherwise writes to local disk (dev). */
 export async function saveUpload(
   subdir: string,
   originalName: string,
@@ -14,12 +25,13 @@ export async function saveUpload(
   const ext = path.extname(originalName) || "";
   const basename = `${crypto.randomUUID()}${ext}`;
 
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
+  const blobToken = findBlobToken();
+  if (blobToken) {
     const { put } = await import("@vercel/blob");
     const blob = await put(`${subdir}/${basename}`, buffer, {
       access: "public",
       contentType: mimeType,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+      token: blobToken,
     });
     return blob.url;
   }
