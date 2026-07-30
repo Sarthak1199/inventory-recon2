@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import { AddVendorModal } from "./AddVendorModal";
+
+const MAX_FILE_SIZE_MB = 10;
 
 interface Vendor {
   id: string;
@@ -34,6 +37,7 @@ interface ExtractedLine {
 
 export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const { activeBranchId } = useAuth();
+  const { showToast } = useToast();
 
   const [file, setFile] = useState<File | null>(null);
   const [openPos, setOpenPos] = useState<OpenPo[]>([]);
@@ -60,6 +64,15 @@ export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSa
     api.get("/vendors").then((res) => setVendors(res.data));
     api.get("/items").then((res) => setItems(res.data));
   }, [activeBranchId]);
+
+  function handleFileSelect(f: File | null) {
+    setError(null);
+    if (f && f.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+      setError(`File is too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.`);
+      return;
+    }
+    setFile(f);
+  }
 
   async function handleUpload() {
     if (!file) return;
@@ -118,10 +131,12 @@ export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSa
           matchType: l.resolvedItemId ? "manual" : l.matchType,
         })),
       });
+      showToast("GRN saved.");
       onSaved();
       onClose();
     } catch (err: any) {
       setError(err?.response?.data?.error ?? "Failed to save GRN");
+      showToast("Failed to save GRN.", "error");
     } finally {
       setSaving(false);
     }
@@ -151,20 +166,34 @@ export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSa
 
         {!grnId ? (
           <div className="flex-1 space-y-4 p-6">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">File (image or PDF)</label>
-              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border-2 border-dashed border-brand/40 bg-brand/5 px-4 py-10 text-sm font-medium text-brand transition hover:border-brand hover:bg-brand/10">
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            {uploading ? (
+              <div className="flex flex-col items-center justify-center gap-3 rounded-md border-2 border-dashed border-brand/40 bg-brand/5 px-4 py-16 text-center">
+                <svg className="h-8 w-8 animate-spin text-brand" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                 </svg>
-                {file ? file.name : "Choose file to upload"}
-                <input type="file" accept="image/*,.pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="hidden" />
-              </label>
-            </div>
+                <p className="text-sm font-medium text-brand">Scanning invoice...</p>
+                <p className="text-xs text-gray-500">Reading line items, prices, and vendor details</p>
+              </div>
+            ) : (
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">File (image or PDF)</label>
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border-2 border-dashed border-brand/40 bg-brand/5 px-4 py-10 text-sm font-medium text-brand transition hover:border-brand hover:bg-brand/10">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  {file ? file.name : "Choose file to upload"}
+                  <input type="file" accept="image/*,.pdf" onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)} className="hidden" />
+                </label>
+                <p className="mt-1.5 text-xs text-gray-400">1 file per upload · JPG, PNG, or PDF · max {MAX_FILE_SIZE_MB}MB</p>
+              </div>
+            )}
             {error && <p className="text-sm text-red-600">{error}</p>}
-            <button onClick={handleUpload} disabled={!file || uploading} className="w-full rounded-md bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
-              {uploading ? "Processing..." : "Upload & Extract"}
-            </button>
+            {!uploading && (
+              <button onClick={handleUpload} disabled={!file || uploading} className="w-full rounded-md bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+                Upload & Extract
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex-1 space-y-4 p-6">

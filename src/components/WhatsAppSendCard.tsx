@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
+import { useToast } from "../context/ToastContext";
 
 function WhatsAppIcon() {
   return (
@@ -15,19 +16,22 @@ export function WhatsAppSendCard({
   sendUrl,
   sentLabel,
   actionLabel,
+  initialPreview,
 }: {
   hasWhatsapp: boolean;
   previewUrl: string;
   sendUrl: string;
   sentLabel?: string;
   actionLabel: string;
+  initialPreview?: { message: string; waLink: string | null } | null;
 }) {
-  const [preview, setPreview] = useState<{ message: string; waLink: string | null } | null>(null);
-  const [loadingPreview, setLoadingPreview] = useState(true);
+  const { showToast } = useToast();
+  const [preview, setPreview] = useState<{ message: string; waLink: string | null } | null>(initialPreview ?? null);
+  const [loadingPreview, setLoadingPreview] = useState(initialPreview === undefined && hasWhatsapp);
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    if (!hasWhatsapp) {
+    if (!hasWhatsapp || initialPreview !== undefined) {
       setLoadingPreview(false);
       return;
     }
@@ -41,6 +45,9 @@ export function WhatsAppSendCard({
       const res = await api.post(sendUrl);
       setPreview({ message: res.data.message, waLink: res.data.waLink });
       if (res.data.waLink) window.open(res.data.waLink, "_blank");
+      showToast("Opened in WhatsApp.");
+    } catch {
+      showToast("Failed to send on WhatsApp.", "error");
     } finally {
       setSending(false);
     }

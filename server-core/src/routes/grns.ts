@@ -8,6 +8,7 @@ import { findBestMatch } from "../lib/fuzzyMatch.js";
 import { recomputePoComparison } from "../services/gapEngine.js";
 import { saveUpload } from "../services/storage.js";
 import { buildGrnWhatsAppMessage, buildWaLink } from "../services/waTemplates.js";
+import { generateGrnNumber } from "../lib/grnNumber.js";
 
 export const grnsRouter = Router();
 
@@ -55,10 +56,11 @@ grnsRouter.post("/upload", requireAuth, uploadGrn.single("file"), async (req: Au
     return res.status(500).json({ error: "File storage failed", detail: err instanceof Error ? err.message : String(err) });
   }
 
+  const grnNumber = await generateGrnNumber(req.user!.accountId, branchId);
   const grnRes = await pool.query(
-    `INSERT INTO grns (account_id, po_id, branch_id, file_url, ocr_status)
-     VALUES ($1, $2, $3, $4, 'pending') RETURNING id`,
-    [req.user!.accountId, poId, branchId, fileUrl]
+    `INSERT INTO grns (account_id, po_id, branch_id, file_url, ocr_status, grn_number)
+     VALUES ($1, $2, $3, $4, 'pending', $5) RETURNING id`,
+    [req.user!.accountId, poId, branchId, fileUrl, grnNumber]
   );
   const grnId = grnRes.rows[0].id;
 
@@ -97,6 +99,7 @@ grnsRouter.post("/upload", requireAuth, uploadGrn.single("file"), async (req: Au
 
   res.status(201).json({
     grnId,
+    grnNumber,
     fileUrl,
     ocrStatus,
     extracted: { ...ocrResult, lines: suggestedLines },
@@ -132,7 +135,7 @@ grnsRouter.get("/", requireAuth, async (req: AuthedRequest, res) => {
   }
 
   const result = await pool.query(
-    `SELECT g.id, g.invoice_number, g.invoice_date, g.received_date, g.ocr_status, g.file_url, g.created_at,
+    `SELECT g.id, g.invoice_number, g.grn_number, g.invoice_date, g.received_date, g.ocr_status, g.file_url, g.created_at,
             g.po_id, po.po_number, b.name AS branch_name, v.name AS vendor_name
      FROM grns g
      LEFT JOIN purchase_orders po ON po.id = g.po_id
@@ -161,7 +164,8 @@ grnsRouter.get("/:id", requireAuth, async (req: AuthedRequest, res) => {
     `SELECT gl.*, i.name AS item_name, i.unit FROM grn_lines gl LEFT JOIN items i ON i.id = gl.item_id WHERE gl.grn_id = $1`,
     [req.params.id]
   );
-  res.json({ ...grnRes.rows[0], lines: linesRes.rows });
+  const waPreview = grnRes.rows[0].vendor_whatsapp ? await buildGrnWaPreview(req.user!.accountId, req.params.id as string) : null;
+  res.json({ ...grnRes.rows[0], lines: linesRes.rows, waPreview });
 });
 
 async function buildGrnWaPreview(accountId: string, grnId: string) {

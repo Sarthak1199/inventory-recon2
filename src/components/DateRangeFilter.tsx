@@ -22,7 +22,15 @@ const PRESETS: { label: string; range: () => DateRange }[] = [
   { label: "All time", range: () => ({ from: "", to: "" }) },
 ];
 
-export function DateRangeFilter({ value, onChange }: { value: DateRange; onChange: (range: DateRange) => void }) {
+export function DateRangeFilter({
+  value,
+  onChange,
+  label: labelPrefix,
+}: {
+  value: DateRange;
+  onChange: (range: DateRange) => void;
+  label?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
   const ref = useRef<HTMLDivElement>(null);
@@ -37,20 +45,21 @@ export function DateRangeFilter({ value, onChange }: { value: DateRange; onChang
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
-  const label = !value.from && !value.to ? "All time" : `${value.from || "..."} to ${value.to || "..."}`;
+  const rangeText = !value.from && !value.to ? "All time" : `${value.from || "..."} to ${value.to || "..."}`;
+  const label = labelPrefix ? `${labelPrefix}: ${rangeText}` : rangeText;
 
   return (
     <div className="relative" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        className="flex items-center gap-2 rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
       >
-        <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="h-4 w-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
-        {label}
-        <svg className="h-3 w-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <span className="whitespace-nowrap">{label}</span>
+        <svg className="h-3 w-3 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>

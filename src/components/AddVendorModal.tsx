@@ -1,15 +1,10 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { api } from "../lib/api";
 
 interface Vendor {
   id: string;
   name: string;
   whatsapp_number: string | null;
-}
-
-interface Item {
-  id: string;
-  name: string;
 }
 
 export function AddVendorModal({
@@ -24,14 +19,9 @@ export function AddVendorModal({
   const [gstin, setGstin] = useState("");
   const [pocName, setPocName] = useState("");
   const [pocNumber, setPocNumber] = useState("");
-  const [mainItemId, setMainItemId] = useState("");
-  const [items, setItems] = useState<Item[]>([]);
+  const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    api.get("/items").then((res) => setItems(res.data));
-  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -48,7 +38,7 @@ export function AddVendorModal({
         gstin: gstin || null,
         poc_name: pocName || null,
         poc_number: pocNumber || null,
-        main_item_id: mainItemId || null,
+        description: description || null,
       });
       onCreated(res.data);
       onClose();
@@ -94,13 +84,14 @@ export function AddVendorModal({
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-700">Main item supplied</label>
-            <select value={mainItemId} onChange={(e) => setMainItemId(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
-              <option value="">None</option>
-              {items.map((i) => (
-                <option key={i.id} value={i.id}>{i.name}</option>
-              ))}
-            </select>
+            <label className="mb-1 block text-xs font-medium text-gray-700">Vendor description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What does this vendor supply?"
+              rows={2}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex justify-end gap-2 pt-1">

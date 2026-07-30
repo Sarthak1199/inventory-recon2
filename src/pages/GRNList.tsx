@@ -8,6 +8,7 @@ import { SkeletonTable } from "../components/Skeleton";
 
 interface Grn {
   id: string;
+  grn_number: string | null;
   invoice_number: string | null;
   invoice_date: string | null;
   received_date: string | null;
@@ -71,19 +72,19 @@ export function GRNList() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+        <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="filter-select rounded-md border border-gray-300 py-1.5 pl-3 text-sm">
           <option value="all">All branches</option>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>{b.name}</option>
           ))}
         </select>
-        <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+        <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="filter-select rounded-md border border-gray-300 py-1.5 pl-3 text-sm">
           <option value="">All vendors</option>
           {vendors.map((v) => (
             <option key={v.id} value={v.id}>{v.name}</option>
           ))}
         </select>
-        <DateRangeFilter value={dateRange} onChange={setDateRange} />
+        <DateRangeFilter value={dateRange} onChange={setDateRange} label="Created at" />
       </div>
 
       {loading ? (
@@ -93,6 +94,7 @@ export function GRNList() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 text-left text-xs uppercase text-gray-400">
+                <th className="px-5 py-2 font-medium">GRN #</th>
                 <th className="px-5 py-2 font-medium">Invoice #</th>
                 <th className="px-5 py-2 font-medium">Branch</th>
                 <th className="px-5 py-2 font-medium">Vendor</th>
@@ -105,14 +107,15 @@ export function GRNList() {
             <tbody>
               {grns.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-6 text-center text-gray-400">No GRNs uploaded yet.</td>
+                  <td colSpan={8} className="px-5 py-6 text-center text-gray-400">No GRNs uploaded yet.</td>
                 </tr>
               )}
               {grns.map((g) => (
                 <tr key={g.id} className="border-b border-gray-50">
                   <td className="px-5 py-2">
-                    <Link to={`/grns/${g.id}`} className="font-medium text-brand hover:underline">{g.invoice_number ?? "(no invoice #)"}</Link>
+                    <Link to={`/grns/${g.id}`} className="font-medium text-brand hover:underline">{g.grn_number ?? "-"}</Link>
                   </td>
+                  <td className="px-5 py-2">{g.invoice_number ?? "(no invoice #)"}</td>
                   <td className="px-5 py-2">{g.branch_name}</td>
                   <td className="px-5 py-2">{g.vendor_name ?? "-"}</td>
                   <td className="px-5 py-2">{g.po_number ?? "Off-PO"}</td>

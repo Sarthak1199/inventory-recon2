@@ -50,11 +50,13 @@ CREATE TABLE IF NOT EXISTS vendors (
   lead_time_days   INTEGER,
   poc_name         TEXT,
   poc_number       TEXT,
+  description      TEXT,
   created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_vendors_account ON vendors(account_id);
 ALTER TABLE vendors ADD COLUMN IF NOT EXISTS poc_name TEXT;
 ALTER TABLE vendors ADD COLUMN IF NOT EXISTS poc_number TEXT;
+ALTER TABLE vendors ADD COLUMN IF NOT EXISTS description TEXT;
 
 CREATE TABLE IF NOT EXISTS items (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -102,6 +104,7 @@ CREATE TABLE IF NOT EXISTS grns (
   branch_id       UUID NOT NULL REFERENCES branches(id),
   vendor_id       UUID REFERENCES vendors(id),
   invoice_number  TEXT,
+  grn_number      TEXT,
   invoice_date    DATE,
   received_date   DATE,
   file_url        TEXT NOT NULL,
@@ -111,6 +114,7 @@ CREATE TABLE IF NOT EXISTS grns (
 );
 CREATE INDEX IF NOT EXISTS idx_grn_account_branch ON grns(account_id, branch_id);
 CREATE INDEX IF NOT EXISTS idx_grn_po ON grns(po_id);
+ALTER TABLE grns ADD COLUMN IF NOT EXISTS grn_number TEXT;
 
 CREATE TABLE IF NOT EXISTS grn_lines (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),

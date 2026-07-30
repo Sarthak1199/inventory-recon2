@@ -88,8 +88,11 @@ export function AppShell() {
           </div>
           <button
             onClick={() => logout()}
-            className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-white"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-white"
           >
+            <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 16l4-4m0 0l-4-4m4 4H7m0-9H5a2 2 0 00-2 2v14a2 2 0 002 2h2" />
+            </svg>
             Logout
           </button>
         </div>

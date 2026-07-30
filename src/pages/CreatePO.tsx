@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import { AddVendorModal } from "../components/AddVendorModal";
 
 interface Vendor {
@@ -48,6 +49,7 @@ function downloadSampleCsv() {
 
 export function CreatePO() {
   const { activeBranchId } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -140,9 +142,11 @@ export function CreatePO() {
         expectedDeliveryDate: expectedDeliveryDate || null,
         lines: lines.map((l) => ({ itemId: l.itemId, orderedQty: l.orderedQty, unitPrice: l.unitPrice })),
       });
+      showToast(`Purchase order ${res.data.po_number ?? ""} created.`);
       navigate(`/purchase-orders/${res.data.id}`);
     } catch (err: any) {
       setError(err?.response?.data?.error ?? "Failed to create PO");
+      showToast("Failed to create purchase order.", "error");
     } finally {
       setSubmitting(false);
     }

@@ -88,15 +88,18 @@ dashboardRouter.get("/kpis", requireAuth, async (req: AuthedRequest, res) => {
     onTime: {
       pct: onTimePct,
       breakdown: { early: onTimeCounts.early, on_time: onTimeCounts.on_time, late: onTimeCounts.late + onTimeCounts.overdue },
+      count: onTimeEligible,
     },
     inFull: {
       pct: inFullPct,
       breakdown: fillCounts,
+      count: fillEligible,
     },
     priceAccuracy: {
       pct: priceAccuracyPct,
       breakdown: priceCounts,
       tolerancePct: tolerance,
+      count: priceTotal,
     },
   });
 });
@@ -211,5 +214,24 @@ dashboardRouter.get("/payables", requireAuth, async (req: AuthedRequest, res) =>
     amountPayable: Number(r.amount_payable),
   }));
 
-  res.json(rows);
+  const invoicesWhere = buildFilters(req, "po");
+  const invoicesRes = await pool.query(
+    `SELECT v.name AS vendor_name, po.po_number, po.created_at, po.status, po.total_amount
+     FROM purchase_orders po
+     JOIN vendors v ON v.id = po.vendor_id
+     WHERE po.status IN ('sent', 'partially_received', 'received') AND ${invoicesWhere.where}
+     ORDER BY v.name, po.created_at DESC`,
+    invoicesWhere.params
+  );
+  const invoices = invoicesRes.rows.map((r: any) => ({
+    vendorName: r.vendor_name,
+    poNumber: r.po_number,
+    createdAt: r.created_at,
+    status: r.status,
+    amount: Number(r.total_amount),
+  }));
+
+  const totalSpend = rows.reduce((s, r) => s + r.amountPayable, 0);
+
+  res.json({ rows, invoices, totalSpend });
 });

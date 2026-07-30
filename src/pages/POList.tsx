@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { SkeletonTable } from "../components/Skeleton";
+import { DateRangeFilter, type DateRange } from "../components/DateRangeFilter";
 
 interface PO {
   id: string;
@@ -35,6 +36,7 @@ export function POList() {
   const [status, setStatus] = useState("");
   const [vendorId, setVendorId] = useState("");
   const [branchId, setBranchId] = useState("all");
+  const [dateRange, setDateRange] = useState<DateRange>({ from: "", to: "" });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,12 +47,14 @@ export function POList() {
     const params: Record<string, string> = { branchId };
     if (status) params.status = status;
     if (vendorId) params.vendorId = vendorId;
+    if (dateRange.from) params.dateFrom = dateRange.from;
+    if (dateRange.to) params.dateTo = dateRange.to;
     setLoading(true);
     api
       .get("/purchase-orders", { params })
       .then((res) => setPos(res.data))
       .finally(() => setLoading(false));
-  }, [status, vendorId, branchId]);
+  }, [status, vendorId, branchId, dateRange]);
 
   return (
     <div className="space-y-4">
@@ -62,13 +66,13 @@ export function POList() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+        <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="filter-select rounded-md border border-gray-300 py-1.5 pl-3 text-sm">
           <option value="all">All branches</option>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>{b.name}</option>
           ))}
         </select>
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+        <select value={status} onChange={(e) => setStatus(e.target.value)} className="filter-select rounded-md border border-gray-300 py-1.5 pl-3 text-sm">
           <option value="">All statuses</option>
           <option value="draft">Draft</option>
           <option value="sent">Sent</option>
@@ -76,12 +80,13 @@ export function POList() {
           <option value="received">Received</option>
           <option value="closed">Closed</option>
         </select>
-        <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+        <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="filter-select rounded-md border border-gray-300 py-1.5 pl-3 text-sm">
           <option value="">All vendors</option>
           {vendors.map((v) => (
             <option key={v.id} value={v.id}>{v.name}</option>
           ))}
         </select>
+        <DateRangeFilter value={dateRange} onChange={setDateRange} label="Created at" />
       </div>
 
       {loading ? (

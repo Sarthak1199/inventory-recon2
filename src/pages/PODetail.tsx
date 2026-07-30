@@ -33,6 +33,7 @@ interface PODetailData {
   branch_name: string;
   lines: Line[];
   comparison: Comparison | null;
+  waPreview: { message: string; waLink: string | null } | null;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -145,6 +146,7 @@ export function PODetail() {
         sendUrl={`/purchase-orders/${id}/send`}
         sentLabel={po.sent_at ? `Last sent ${new Date(po.sent_at).toISOString().slice(0, 10)}` : undefined}
         actionLabel={po.status === "draft" ? "Send on WhatsApp" : "Resend on WhatsApp"}
+        initialPreview={po.waPreview}
       />
     </div>
   );

@@ -1,7 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import { AddVendorModal } from "../components/AddVendorModal";
+import { SkeletonTable } from "../components/Skeleton";
 
 interface Vendor {
   id: string;
@@ -10,7 +12,7 @@ interface Vendor {
   gstin: string | null;
   poc_name: string | null;
   poc_number: string | null;
-  main_item_name: string | null;
+  description: string | null;
 }
 
 interface Item {
@@ -33,18 +35,21 @@ function downloadFile(url: string, filename: string) {
 
 export function Settings() {
   const { account, refresh } = useAuth();
+  const { showToast } = useToast();
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [brandName, setBrandName] = useState(account?.brand_name ?? account?.name ?? "");
   const [savingBrand, setSavingBrand] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [showAddVendor, setShowAddVendor] = useState(false);
   const [itemForm, setItemForm] = useState({ name: "", unit: "", category: "" });
   const [itemError, setItemError] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
   const [vendorCsv, setVendorCsv] = useState<File | null>(null);
   const [itemCsv, setItemCsv] = useState<File | null>(null);
+  const [loading, setLoading] = useState(true);
 
   function loadVendors() {
     api.get("/vendors").then((res) => setVendors(res.data));
@@ -53,21 +58,27 @@ export function Settings() {
     api.get("/items").then((res) => setItems(res.data));
   }
   useEffect(() => {
-    loadVendors();
-    loadItems();
+    Promise.all([api.get("/vendors"), api.get("/items")])
+      .then(([vendorsRes, itemsRes]) => {
+        setVendors(vendorsRes.data);
+        setItems(itemsRes.data);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  async function saveLogo(e: FormEvent) {
+  async function saveBrand(e: FormEvent) {
     e.preventDefault();
-    if (!logoFile) return;
     setSavingBrand(true);
     try {
       const formData = new FormData();
-      formData.append("logo", logoFile);
+      if (logoFile) formData.append("logo", logoFile);
+      formData.append("brand_name", brandName);
       await api.post("/onboarding/setup", formData, { headers: { "Content-Type": "multipart/form-data" } });
       await refresh();
       setLogoFile(null);
-      setStatus("Logo updated.");
+      showToast("Branding updated.");
+    } catch {
+      showToast("Failed to update branding.", "error");
     } finally {
       setSavingBrand(false);
     }
@@ -76,6 +87,7 @@ export function Settings() {
   async function deleteVendor(id: string) {
     await api.delete(`/vendors/${id}`);
     loadVendors();
+    showToast("Vendor removed.");
   }
 
   async function uploadVendorCsv() {
@@ -83,7 +95,7 @@ export function Settings() {
     const formData = new FormData();
     formData.append("file", vendorCsv);
     const res = await api.post("/vendors/import-csv", formData, { headers: { "Content-Type": "multipart/form-data" } });
-    setStatus(`Imported ${res.data.created.length} vendors, skipped ${res.data.skipped.length}.`);
+    showToast(`Imported ${res.data.created.length} vendors, skipped ${res.data.skipped.length}.`);
     setVendorCsv(null);
     loadVendors();
   }
@@ -100,14 +112,15 @@ export function Settings() {
       return;
     }
     await api.post("/items", itemForm);
+    showToast(`Added item "${itemForm.name}".`);
     setItemForm({ name: "", unit: "", category: "" });
     loadItems();
-    setStatus(`Added item "${itemForm.name}".`);
   }
 
   async function deleteItem(id: string) {
     await api.delete(`/items/${id}`);
     loadItems();
+    showToast("Item removed.");
   }
 
   async function uploadItemCsv() {
@@ -115,7 +128,7 @@ export function Settings() {
     const formData = new FormData();
     formData.append("file", itemCsv);
     const res = await api.post("/items/import-csv", formData, { headers: { "Content-Type": "multipart/form-data" } });
-    setStatus(`Imported ${res.data.created.length} items, skipped ${res.data.skipped.length}.`);
+    showToast(`Imported ${res.data.created.length} items.`);
     setItemCsv(null);
     loadItems();
   }
@@ -127,35 +140,66 @@ export function Settings() {
           onClose={() => setShowAddVendor(false)}
           onCreated={() => {
             loadVendors();
-            setStatus("Vendor added.");
+            showToast("Vendor added.");
           }}
         />
       )}
 
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Settings</h1>
-        <p className="text-sm text-gray-500">Manage your logo, vendors, and item master here at any time.</p>
+        <p className="text-sm text-gray-500">Manage your branding, vendors, and item master here at any time.</p>
       </div>
 
-      {status && <div className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">{status}</div>}
-
-      <form onSubmit={saveLogo} className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="font-medium text-gray-900">Logo</h2>
-        <div className="flex items-center gap-4">
-          {account?.logo_url ? (
-            <img src={account.logo_url} alt="Current logo" className="h-14 w-14 rounded-full object-cover" />
+      <form onSubmit={saveBrand} className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
+        <h2 className="font-medium text-gray-900">Branding</h2>
+        <div className="flex items-start gap-5">
+          {logoFile ? (
+            <img src={URL.createObjectURL(logoFile)} alt="New logo preview" className="h-16 w-16 shrink-0 rounded-full object-cover" />
+          ) : account?.logo_url ? (
+            <img src={account.logo_url} alt="Current logo" className="h-16 w-16 shrink-0 rounded-full object-cover" />
           ) : (
             <div
-              className="flex h-14 w-14 items-center justify-center rounded-full text-lg font-bold text-white"
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-lg font-bold text-white"
               style={{ backgroundColor: account?.brand_hex_color || "#4F46E5" }}
             >
-              {(account?.brand_name || account?.name || "?").slice(0, 1).toUpperCase()}
+              {(brandName || "?").slice(0, 1).toUpperCase()}
             </div>
           )}
-          <input type="file" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} className="text-sm" />
+          <label
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              const f = e.dataTransfer.files?.[0];
+              if (f) setLogoFile(f);
+            }}
+            className={`flex flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-4 py-6 text-center text-sm transition ${
+              dragOver ? "border-brand bg-brand/10 text-brand" : "border-gray-300 bg-gray-50 text-gray-500 hover:border-brand hover:bg-brand/5 hover:text-brand"
+            }`}
+          >
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <span className="font-medium">{logoFile ? logoFile.name : "Click or drag a logo image here"}</span>
+            <span className="text-xs text-gray-400">PNG or JPG, square image recommended</span>
+            <input type="file" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} className="hidden" />
+          </label>
         </div>
-        <button type="submit" disabled={!logoFile || savingBrand} className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
-          {savingBrand ? "Saving..." : "Save logo"}
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-700">Merchant name</label>
+          <input
+            value={brandName}
+            onChange={(e) => setBrandName(e.target.value)}
+            placeholder="Your restaurant / brand name"
+            className="w-full max-w-sm rounded-md border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+        <button type="submit" disabled={savingBrand} className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+          {savingBrand ? "Saving..." : "Save branding"}
         </button>
       </form>
 
@@ -180,6 +224,9 @@ export function Settings() {
             </button>
           </div>
         </div>
+        {loading ? (
+          <SkeletonTable rows={3} cols={2} />
+        ) : (
         <div className="divide-y divide-gray-100 rounded-md border border-gray-100">
           {vendors.length === 0 && <p className="px-3 py-3 text-sm text-gray-400">No vendors yet.</p>}
           {vendors.map((v) => (
@@ -188,7 +235,7 @@ export function Settings() {
                 <span className="font-medium text-gray-900">{v.name}</span>
                 {v.whatsapp_number && <span className="ml-2 text-gray-400">{v.whatsapp_number}</span>}
                 {v.poc_name && <span className="ml-2 text-gray-400">POC: {v.poc_name}{v.poc_number ? ` (${v.poc_number})` : ""}</span>}
-                {v.main_item_name && <span className="ml-2 text-gray-400">Main item: {v.main_item_name}</span>}
+                {v.description && <span className="ml-2 text-gray-400">{v.description}</span>}
               </div>
               <button onClick={() => deleteVendor(v.id)} className="text-xs text-red-500 hover:text-red-700">
                 Remove
@@ -196,6 +243,7 @@ export function Settings() {
             </div>
           ))}
         </div>
+        )}
       </div>
 
       <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
@@ -240,6 +288,9 @@ export function Settings() {
           </button>
         </form>
         {itemError && <p className="text-sm text-red-600">{itemError}</p>}
+        {loading ? (
+          <SkeletonTable rows={3} cols={2} />
+        ) : (
         <div className="divide-y divide-gray-100 rounded-md border border-gray-100">
           {items.length === 0 && <p className="px-3 py-3 text-sm text-gray-400">No items yet.</p>}
           {items.map((it) => (
@@ -254,6 +305,7 @@ export function Settings() {
             </div>
           ))}
         </div>
+        )}
       </div>
     </div>
   );

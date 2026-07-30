@@ -100,8 +100,9 @@ purchaseOrdersRouter.get("/:id", requireAuth, async (req: AuthedRequest, res) =>
   );
 
   const comparisonRes = await pool.query(`SELECT * FROM po_comparisons WHERE po_id = $1`, [req.params.id]);
+  const waPreview = poRes.rows[0].vendor_whatsapp ? await buildPoWaPreview(req.user!.accountId, req.params.id as string) : null;
 
-  res.json({ ...poRes.rows[0], lines: linesRes.rows, comparison: comparisonRes.rows[0] ?? null });
+  res.json({ ...poRes.rows[0], lines: linesRes.rows, comparison: comparisonRes.rows[0] ?? null, waPreview });
 });
 
 purchaseOrdersRouter.post("/", requireAuth, async (req: AuthedRequest, res) => {

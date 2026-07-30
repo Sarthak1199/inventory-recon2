@@ -17,6 +17,7 @@ interface GrnLine {
 
 interface GrnDetailData {
   id: string;
+  grn_number: string | null;
   invoice_number: string | null;
   invoice_date: string | null;
   received_date: string | null;
@@ -27,6 +28,7 @@ interface GrnDetailData {
   vendor_whatsapp: string | null;
   po_number: string | null;
   lines: GrnLine[];
+  waPreview: { message: string; waLink: string | null } | null;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -60,8 +62,9 @@ export function GRNDetail() {
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">{grn.invoice_number ?? "GRN (no invoice #)"}</h1>
+          <h1 className="text-xl font-semibold text-gray-900">{grn.grn_number ?? grn.invoice_number ?? "GRN"}</h1>
           <p className="text-sm text-gray-500">
+            {grn.invoice_number ? `Invoice ${grn.invoice_number} · ` : ""}
             {grn.branch_name}
             {grn.vendor_name ? ` · ${grn.vendor_name}` : ""}
             {grn.po_number ? ` · Linked to ${grn.po_number}` : " · Off-PO"}
@@ -134,6 +137,7 @@ export function GRNDetail() {
             previewUrl={`/grns/${id}/wa-preview`}
             sendUrl={`/grns/${id}/share-wa`}
             actionLabel="Share on WhatsApp"
+            initialPreview={grn.waPreview}
           />
         </div>
       </div>
