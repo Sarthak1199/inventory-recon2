@@ -13,8 +13,9 @@ import {
   CartesianGrid,
 } from "recharts";
 import { api } from "../lib/api";
-import { QuestCards } from "../components/QuestCards";
+import { useAuth } from "../context/AuthContext";
 import { DateRangeFilter, type DateRange } from "../components/DateRangeFilter";
+import { SkeletonCard, SkeletonTable } from "../components/Skeleton";
 
 interface Kpis {
   onTime: { pct: number | null; breakdown: { early: number; on_time: number; late: number } };
@@ -93,6 +94,8 @@ function KpiPie({ title, pct, breakdown, tolerancePct }: { title: string; pct: n
 }
 
 export function Dashboard() {
+  const { branches } = useAuth();
+  const [branchFilter, setBranchFilter] = useState("all");
   const [vendorFilter, setVendorFilter] = useState("");
   const [dateRange, setDateRange] = useState<DateRange>({ from: "", to: "" });
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -107,7 +110,7 @@ export function Dashboard() {
   }, []);
 
   useEffect(() => {
-    const params: Record<string, string> = { branchId: "all" };
+    const params: Record<string, string> = { branchId: branchFilter };
     if (vendorFilter) params.vendorId = vendorFilter;
     if (dateRange.from) params.dateFrom = dateRange.from;
     if (dateRange.to) params.dateTo = dateRange.to;
@@ -126,7 +129,7 @@ export function Dashboard() {
         setPayables(payablesRes.data);
       })
       .finally(() => setLoading(false));
-  }, [vendorFilter, dateRange]);
+  }, [branchFilter, vendorFilter, dateRange]);
 
   function downloadPayablesCsv() {
     const header = "Vendor,Open POs,Amount Payable\n";
@@ -144,11 +147,21 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <QuestCards />
-
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
         <div className="mt-3 flex flex-wrap items-center gap-2">
+          <select
+            value={branchFilter}
+            onChange={(e) => setBranchFilter(e.target.value)}
+            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
+          >
+            <option value="all">All branches</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
           <select
             value={vendorFilter}
             onChange={(e) => setVendorFilter(e.target.value)}
@@ -165,137 +178,155 @@ export function Dashboard() {
         </div>
       </div>
 
-      {loading && <p className="text-sm text-gray-500">Loading...</p>}
-
-      {kpis && (
+      {loading ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <KpiPie title="On-Time Delivery" pct={kpis.onTime.pct} breakdown={kpis.onTime.breakdown} />
-          <KpiPie title="In-Full Delivery" pct={kpis.inFull.pct} breakdown={kpis.inFull.breakdown} />
-          <KpiPie title="Price Accuracy" pct={kpis.priceAccuracy.pct} breakdown={kpis.priceAccuracy.breakdown} tolerancePct={kpis.priceAccuracy.tolerancePct} />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+      ) : (
+        kpis && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <KpiPie title="On-Time Delivery" pct={kpis.onTime.pct} breakdown={kpis.onTime.breakdown} />
+            <KpiPie title="In-Full Delivery" pct={kpis.inFull.pct} breakdown={kpis.inFull.breakdown} />
+            <KpiPie title="Price Accuracy" pct={kpis.priceAccuracy.pct} breakdown={kpis.priceAccuracy.breakdown} tolerancePct={kpis.priceAccuracy.tolerancePct} />
+          </div>
+        )
+      )}
+
+      {loading ? (
+        <SkeletonTable rows={3} cols={3} />
+      ) : (
+        <div className="rounded-lg border border-gray-200 bg-white">
+          <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
+            <div>
+              <h2 className="font-medium text-gray-900">Price trend</h2>
+              <p className="text-xs text-gray-500">Week on week received GRN price per item</p>
+            </div>
+          </div>
+          <div className="h-72 p-4">
+            {priceTrend && priceTrend.series.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={priceTrend.series}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="week" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  {priceTrend.itemNames.map((name, i) => (
+                    <Line key={name} type="monotone" dataKey={name} stroke={LINE_COLORS[i % LINE_COLORS.length]} connectNulls dot={{ r: 3 }} />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-gray-400">No confirmed GRN data yet for this filter.</div>
+            )}
+          </div>
         </div>
       )}
 
-      <div className="rounded-lg border border-gray-200 bg-white">
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
-          <div>
-            <h2 className="font-medium text-gray-900">Price trend</h2>
-            <p className="text-xs text-gray-500">Week on week received price per item</p>
+      {loading ? (
+        <SkeletonTable />
+      ) : (
+        <div className="rounded-lg border border-gray-200 bg-white">
+          <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
+            <div>
+              <h2 className="font-medium text-gray-900">Price Impact</h2>
+              <p className="text-xs text-gray-500">Ordered vs received price, sorted by highest cost impact</p>
+            </div>
+            {priceImpact && <p className="text-sm font-semibold text-gray-900">Total COGS: {fmtRs(priceImpact.totalCogs)}</p>}
           </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 text-left text-xs uppercase text-gray-400">
+                <th className="px-5 py-2 font-medium">Item</th>
+                <th className="px-5 py-2 font-medium">Ordered price</th>
+                <th className="px-5 py-2 font-medium">Received price</th>
+                <th className="px-5 py-2 font-medium">% change</th>
+                <th className="px-5 py-2 font-medium">Qty received</th>
+                <th className="px-5 py-2 font-medium">Cost impact</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(!priceImpact || priceImpact.rows.length === 0) && (
+                <tr>
+                  <td colSpan={6} className="px-5 py-6 text-center text-sm text-gray-400">
+                    No PO-linked GRN data yet for this filter.
+                  </td>
+                </tr>
+              )}
+              {priceImpact?.rows.map((row) => (
+                <tr key={row.itemId} className="border-b border-gray-50">
+                  <td className="px-5 py-2">{row.itemName} <span className="text-gray-400">({row.unit})</span></td>
+                  <td className="px-5 py-2">{fmtRs(row.avgOrderedPrice)}</td>
+                  <td className="px-5 py-2">{fmtRs(row.avgReceivedPrice)}</td>
+                  <td className={`px-5 py-2 ${row.pctChange && row.pctChange > 0 ? "text-red-600" : row.pctChange && row.pctChange < 0 ? "text-green-600" : ""}`}>
+                    {row.pctChange === null ? "N/A" : `${row.pctChange.toFixed(1)}%`}
+                  </td>
+                  <td className="px-5 py-2">{row.totalReceivedQty}</td>
+                  <td className={`px-5 py-2 font-medium ${row.costImpact > 0 ? "text-red-600" : row.costImpact < 0 ? "text-green-600" : "text-gray-700"}`}>
+                    {fmtRs(row.costImpact)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <div className="h-72 p-4">
-          {priceTrend && priceTrend.series.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={priceTrend.series}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="week" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                {priceTrend.itemNames.map((name, i) => (
-                  <Line key={name} type="monotone" dataKey={name} stroke={LINE_COLORS[i % LINE_COLORS.length]} connectNulls dot={{ r: 3 }} />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex h-full items-center justify-center text-sm text-gray-400">No PO-linked GRN data yet for this filter.</div>
-          )}
-        </div>
-      </div>
+      )}
 
-      <div className="rounded-lg border border-gray-200 bg-white">
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
-          <div>
-            <h2 className="font-medium text-gray-900">Price Impact</h2>
-            <p className="text-xs text-gray-500">Ordered vs received price, sorted by highest cost impact</p>
+      {loading ? (
+        <SkeletonTable rows={2} cols={3} />
+      ) : (
+        <div className="rounded-lg border border-gray-200 bg-white">
+          <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
+            <div>
+              <h2 className="font-medium text-gray-900">Vendor payables</h2>
+              <p className="text-xs text-gray-500">Money owed per vendor for open purchase orders</p>
+            </div>
+            <button
+              onClick={downloadPayablesCsv}
+              disabled={payables.length === 0}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              Download as CSV
+            </button>
           </div>
-          {priceImpact && <p className="text-sm font-semibold text-gray-900">Total COGS: {fmtRs(priceImpact.totalCogs)}</p>}
-        </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-100 text-left text-xs uppercase text-gray-400">
-              <th className="px-5 py-2 font-medium">Item</th>
-              <th className="px-5 py-2 font-medium">Ordered price</th>
-              <th className="px-5 py-2 font-medium">Received price</th>
-              <th className="px-5 py-2 font-medium">% change</th>
-              <th className="px-5 py-2 font-medium">Qty received</th>
-              <th className="px-5 py-2 font-medium">Cost impact</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(!priceImpact || priceImpact.rows.length === 0) && (
-              <tr>
-                <td colSpan={6} className="px-5 py-6 text-center text-sm text-gray-400">
-                  No PO-linked GRN data yet for this filter.
-                </td>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 text-left text-xs uppercase text-gray-400">
+                <th className="px-5 py-2 font-medium">Vendor</th>
+                <th className="px-5 py-2 font-medium">Open POs</th>
+                <th className="px-5 py-2 font-medium">Amount payable</th>
               </tr>
+            </thead>
+            <tbody>
+              {payables.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-5 py-6 text-center text-sm text-gray-400">
+                    No outstanding purchase orders for this filter.
+                  </td>
+                </tr>
+              )}
+              {payables.map((p) => (
+                <tr key={p.vendorId} className="border-b border-gray-50">
+                  <td className="px-5 py-2 font-medium text-gray-900">{p.vendorName}</td>
+                  <td className="px-5 py-2">{p.poCount}</td>
+                  <td className="px-5 py-2 font-medium">{fmtRs(p.amountPayable)}</td>
+                </tr>
+              ))}
+            </tbody>
+            {payables.length > 0 && (
+              <tfoot>
+                <tr>
+                  <td className="px-5 py-2 font-semibold text-gray-900">Total</td>
+                  <td className="px-5 py-2"></td>
+                  <td className="px-5 py-2 font-semibold text-gray-900">{fmtRs(totalPayable)}</td>
+                </tr>
+              </tfoot>
             )}
-            {priceImpact?.rows.map((row) => (
-              <tr key={row.itemId} className="border-b border-gray-50">
-                <td className="px-5 py-2">{row.itemName} <span className="text-gray-400">({row.unit})</span></td>
-                <td className="px-5 py-2">{fmtRs(row.avgOrderedPrice)}</td>
-                <td className="px-5 py-2">{fmtRs(row.avgReceivedPrice)}</td>
-                <td className={`px-5 py-2 ${row.pctChange && row.pctChange > 0 ? "text-red-600" : row.pctChange && row.pctChange < 0 ? "text-green-600" : ""}`}>
-                  {row.pctChange === null ? "N/A" : `${row.pctChange.toFixed(1)}%`}
-                </td>
-                <td className="px-5 py-2">{row.totalReceivedQty}</td>
-                <td className={`px-5 py-2 font-medium ${row.costImpact > 0 ? "text-red-600" : row.costImpact < 0 ? "text-green-600" : "text-gray-700"}`}>
-                  {fmtRs(row.costImpact)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="rounded-lg border border-gray-200 bg-white">
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
-          <div>
-            <h2 className="font-medium text-gray-900">Vendor payables</h2>
-            <p className="text-xs text-gray-500">Money owed per vendor for open purchase orders</p>
-          </div>
-          <button
-            onClick={downloadPayablesCsv}
-            disabled={payables.length === 0}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-          >
-            Download as CSV
-          </button>
+          </table>
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-100 text-left text-xs uppercase text-gray-400">
-              <th className="px-5 py-2 font-medium">Vendor</th>
-              <th className="px-5 py-2 font-medium">Open POs</th>
-              <th className="px-5 py-2 font-medium">Amount payable</th>
-            </tr>
-          </thead>
-          <tbody>
-            {payables.length === 0 && (
-              <tr>
-                <td colSpan={3} className="px-5 py-6 text-center text-sm text-gray-400">
-                  No outstanding purchase orders for this filter.
-                </td>
-              </tr>
-            )}
-            {payables.map((p) => (
-              <tr key={p.vendorId} className="border-b border-gray-50">
-                <td className="px-5 py-2 font-medium text-gray-900">{p.vendorName}</td>
-                <td className="px-5 py-2">{p.poCount}</td>
-                <td className="px-5 py-2 font-medium">{fmtRs(p.amountPayable)}</td>
-              </tr>
-            ))}
-          </tbody>
-          {payables.length > 0 && (
-            <tfoot>
-              <tr>
-                <td className="px-5 py-2 font-semibold text-gray-900">Total</td>
-                <td className="px-5 py-2"></td>
-                <td className="px-5 py-2 font-semibold text-gray-900">{fmtRs(totalPayable)}</td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
+      )}
     </div>
   );
 }

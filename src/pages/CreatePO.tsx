@@ -13,6 +13,7 @@ interface Item {
   id: string;
   name: string;
   unit: string;
+  category: string | null;
 }
 
 interface Line {
@@ -34,6 +35,17 @@ interface CsvRow {
   resolvedItemId?: string;
 }
 
+function downloadSampleCsv() {
+  api.get("/purchase-orders/sample-csv", { responseType: "blob" }).then((res) => {
+    const url = URL.createObjectURL(res.data);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "po-lines-sample.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
 export function CreatePO() {
   const { activeBranchId } = useAuth();
   const navigate = useNavigate();
@@ -51,6 +63,7 @@ export function CreatePO() {
   const [manualQty, setManualQty] = useState("");
   const [manualPrice, setManualPrice] = useState("");
 
+  const [showCsvUpload, setShowCsvUpload] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvRows, setCsvRows] = useState<CsvRow[] | null>(null);
   const [showAddVendor, setShowAddVendor] = useState(false);
@@ -66,6 +79,10 @@ export function CreatePO() {
   );
 
   const total = lines.reduce((s, l) => s + l.orderedQty * l.unitPrice, 0);
+
+  function itemLabel(i: Item) {
+    return `${i.name} (${i.unit}${i.category ? `, ${i.category}` : ""})`;
+  }
 
   function addManualLine() {
     const item = items.find((i) => i.id === manualItemId);
@@ -175,63 +192,7 @@ export function CreatePO() {
       </div>
 
       <div className="space-y-3 rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="font-medium text-gray-900">Add line items: CSV upload</h2>
-        <p className="text-xs text-gray-500">Columns: item_name, qty, unit_price</p>
-        <div className="flex items-center gap-2">
-          <input type="file" accept=".csv" onChange={(e) => setCsvFile(e.target.files?.[0] ?? null)} className="text-sm" />
-          <button onClick={previewCsv} disabled={!csvFile} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50">
-            Preview
-          </button>
-        </div>
-
-        {csvRows && (
-          <div className="space-y-2">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs uppercase text-gray-400">
-                  <th className="py-1">Row item name</th>
-                  <th className="py-1">Qty</th>
-                  <th className="py-1">Price</th>
-                  <th className="py-1">Match</th>
-                </tr>
-              </thead>
-              <tbody>
-                {csvRows.map((row) => (
-                  <tr key={row.rowIndex} className="border-t border-gray-50">
-                    <td className="py-1">{row.itemName}</td>
-                    <td className="py-1">{row.qty}</td>
-                    <td className="py-1">{row.unitPrice}</td>
-                    <td className="py-1">
-                      {row.matchedItem ? (
-                        <span className={row.matchType === "exact" ? "text-green-600" : "text-amber-600"}>
-                          {row.matchedItem.name} ({row.matchType})
-                        </span>
-                      ) : (
-                        <select
-                          value={row.resolvedItemId ?? ""}
-                          onChange={(e) => setCsvRowResolution(row.rowIndex, e.target.value)}
-                          className="rounded-md border border-gray-300 px-2 py-1 text-xs"
-                        >
-                          <option value="">Map to item...</option>
-                          {items.map((i) => (
-                            <option key={i.id} value={i.id}>{i.name}</option>
-                          ))}
-                        </select>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <button onClick={addCsvRowsToLines} className="rounded-md bg-gray-900 px-3 py-1.5 text-sm text-white">
-              Add resolved rows to PO
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="space-y-3 rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="font-medium text-gray-900">Add line items: manual entry</h2>
+        <h2 className="font-medium text-gray-900">Add line items</h2>
         <input
           placeholder="Search item..."
           value={itemSearch}
@@ -242,13 +203,81 @@ export function CreatePO() {
           <select value={manualItemId} onChange={(e) => setManualItemId(e.target.value)} className="flex-1 min-w-40 rounded-md border border-gray-300 px-3 py-1.5 text-sm">
             <option value="">Select item</option>
             {filteredItems.map((i) => (
-              <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>
+              <option key={i.id} value={i.id}>{itemLabel(i)}</option>
             ))}
           </select>
           <input placeholder="Qty" type="number" value={manualQty} onChange={(e) => setManualQty(e.target.value)} className="w-24 rounded-md border border-gray-300 px-3 py-1.5 text-sm" />
           <input placeholder="Unit price" type="number" value={manualPrice} onChange={(e) => setManualPrice(e.target.value)} className="w-32 rounded-md border border-gray-300 px-3 py-1.5 text-sm" />
-          <button onClick={addManualLine} className="rounded-md bg-gray-900 px-3 py-1.5 text-sm text-white">Add row</button>
+          <button onClick={addManualLine} className="rounded-md bg-gray-900 px-3 py-1.5 text-sm text-white">Add</button>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setShowCsvUpload((v) => !v)}
+          className="text-xs font-medium text-brand hover:underline"
+        >
+          {showCsvUpload ? "Hide bulk CSV upload" : "Or upload bulk via CSV"}
+        </button>
+
+        {showCsvUpload && (
+          <div className="space-y-3 rounded-md border border-gray-100 bg-gray-50 p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500">Columns: item_name, qty, unit_price</p>
+              <button onClick={downloadSampleCsv} className="text-xs text-brand hover:underline">Download sample CSV</button>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="file" accept=".csv" onChange={(e) => setCsvFile(e.target.files?.[0] ?? null)} className="text-sm" />
+              <button onClick={previewCsv} disabled={!csvFile} className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm disabled:opacity-50">
+                Preview
+              </button>
+            </div>
+
+            {csvRows && (
+              <div className="space-y-2">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs uppercase text-gray-400">
+                      <th className="py-1">Row item name</th>
+                      <th className="py-1">Qty</th>
+                      <th className="py-1">Price</th>
+                      <th className="py-1">Match</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {csvRows.map((row) => (
+                      <tr key={row.rowIndex} className="border-t border-gray-100">
+                        <td className="py-1">{row.itemName}</td>
+                        <td className="py-1">{row.qty}</td>
+                        <td className="py-1">{row.unitPrice}</td>
+                        <td className="py-1">
+                          {row.matchedItem ? (
+                            <span className={row.matchType === "exact" ? "text-green-600" : "text-amber-600"}>
+                              {row.matchedItem.name} ({row.matchType})
+                            </span>
+                          ) : (
+                            <select
+                              value={row.resolvedItemId ?? ""}
+                              onChange={(e) => setCsvRowResolution(row.rowIndex, e.target.value)}
+                              className="rounded-md border border-gray-300 px-2 py-1 text-xs"
+                            >
+                              <option value="">Map to item...</option>
+                              {items.map((i) => (
+                                <option key={i.id} value={i.id}>{itemLabel(i)}</option>
+                              ))}
+                            </select>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <button onClick={addCsvRowsToLines} className="rounded-md bg-gray-900 px-3 py-1.5 text-sm text-white">
+                  Add resolved rows to PO
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="rounded-lg border border-gray-200 bg-white p-6">

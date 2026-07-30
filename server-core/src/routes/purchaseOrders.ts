@@ -9,6 +9,13 @@ import { buildPoWhatsAppMessage, buildWaLink } from "../services/waTemplates.js"
 
 export const purchaseOrdersRouter = Router();
 
+purchaseOrdersRouter.get("/sample-csv", requireAuth, (_req, res) => {
+  const csv = "item_name,qty,unit_price\nTomato,50,30\nOnion,30,25\n";
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", "attachment; filename=po-lines-sample.csv");
+  res.send(csv);
+});
+
 purchaseOrdersRouter.post("/parse-csv", requireAuth, uploadCsv.single("file"), async (req: AuthedRequest, res) => {
   if (!req.file) return res.status(400).json({ error: "file is required" });
   const records: Record<string, string>[] = parse(req.file.buffer, { columns: true, skip_empty_lines: true, trim: true });
@@ -142,35 +149,51 @@ purchaseOrdersRouter.post("/", requireAuth, async (req: AuthedRequest, res) => {
   }
 });
 
-purchaseOrdersRouter.post("/:id/send", requireAuth, async (req: AuthedRequest, res) => {
+async function buildPoWaPreview(accountId: string, poId: string) {
   const poRes = await pool.query(
-    `SELECT po.id, po.po_number, po.expected_delivery_date, po.status, v.name AS vendor_name, v.whatsapp_number
-     FROM purchase_orders po JOIN vendors v ON v.id = po.vendor_id
+    `SELECT po.id, po.po_number, po.expected_delivery_date, po.status, v.name AS vendor_name, v.whatsapp_number, b.name AS branch_name
+     FROM purchase_orders po
+     JOIN vendors v ON v.id = po.vendor_id
+     JOIN branches b ON b.id = po.branch_id
      WHERE po.id = $1 AND po.account_id = $2`,
-    [req.params.id, req.user!.accountId]
+    [poId, accountId]
   );
-  if (poRes.rowCount === 0) return res.status(404).json({ error: "PO not found" });
+  if (poRes.rowCount === 0) return null;
   const po = poRes.rows[0];
 
   const linesRes = await pool.query(
     `SELECT i.name, i.unit, pl.ordered_qty, pl.unit_price, pl.ordered_amount
      FROM po_lines pl JOIN items i ON i.id = pl.item_id WHERE pl.po_id = $1 ORDER BY i.name`,
-    [req.params.id]
+    [poId]
   );
 
   const total = linesRes.rows.reduce((s: number, l: any) => s + Number(l.ordered_amount), 0);
   const message = buildPoWhatsAppMessage({
     poNumber: po.po_number,
+    branchName: po.branch_name,
+    vendorName: po.vendor_name,
     lines: linesRes.rows,
     total,
     expectedDeliveryDate: po.expected_delivery_date ? new Date(po.expected_delivery_date).toISOString().slice(0, 10) : null,
   });
   const waLink = buildWaLink(po.whatsapp_number, message);
+  return { waLink, message, vendorWhatsapp: po.whatsapp_number ?? null };
+}
+
+purchaseOrdersRouter.get("/:id/wa-preview", requireAuth, async (req: AuthedRequest, res) => {
+  const preview = await buildPoWaPreview(req.user!.accountId, req.params.id as string);
+  if (!preview) return res.status(404).json({ error: "PO not found" });
+  res.json(preview);
+});
+
+purchaseOrdersRouter.post("/:id/send", requireAuth, async (req: AuthedRequest, res) => {
+  const preview = await buildPoWaPreview(req.user!.accountId, req.params.id as string);
+  if (!preview) return res.status(404).json({ error: "PO not found" });
 
   await pool.query(
     `UPDATE purchase_orders SET status = CASE WHEN status = 'draft' THEN 'sent' ELSE status END, sent_at = now() WHERE id = $1`,
     [req.params.id]
   );
 
-  res.json({ waLink, message, vendorWhatsapp: po.whatsapp_number ?? null });
+  res.json(preview);
 });

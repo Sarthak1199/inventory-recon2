@@ -105,7 +105,7 @@ grnsRouter.post("/upload", requireAuth, uploadGrn.single("file"), async (req: Au
 });
 
 grnsRouter.get("/", requireAuth, async (req: AuthedRequest, res) => {
-  const { branchId, status } = req.query;
+  const { branchId, status, vendorId, dateFrom, dateTo } = req.query;
   const conditions: string[] = ["g.account_id = $1"];
   const params: unknown[] = [req.user!.accountId];
 
@@ -117,6 +117,18 @@ grnsRouter.get("/", requireAuth, async (req: AuthedRequest, res) => {
   if (status) {
     params.push(status);
     conditions.push(`g.ocr_status = $${params.length}`);
+  }
+  if (vendorId) {
+    params.push(vendorId);
+    conditions.push(`g.vendor_id = $${params.length}`);
+  }
+  if (dateFrom) {
+    params.push(dateFrom);
+    conditions.push(`g.created_at >= $${params.length}`);
+  }
+  if (dateTo) {
+    params.push(dateTo);
+    conditions.push(`g.created_at <= $${params.length}`);
   }
 
   const result = await pool.query(
@@ -152,27 +164,29 @@ grnsRouter.get("/:id", requireAuth, async (req: AuthedRequest, res) => {
   res.json({ ...grnRes.rows[0], lines: linesRes.rows });
 });
 
-grnsRouter.post("/:id/share-wa", requireAuth, async (req: AuthedRequest, res) => {
+async function buildGrnWaPreview(accountId: string, grnId: string) {
   const grnRes = await pool.query(
-    `SELECT g.invoice_number, g.received_date, po.po_number, v.name AS vendor_name, v.whatsapp_number
+    `SELECT g.invoice_number, g.received_date, po.po_number, v.name AS vendor_name, v.whatsapp_number, b.name AS branch_name
      FROM grns g
      LEFT JOIN purchase_orders po ON po.id = g.po_id
      LEFT JOIN vendors v ON v.id = g.vendor_id
+     JOIN branches b ON b.id = g.branch_id
      WHERE g.id = $1 AND g.account_id = $2`,
-    [req.params.id, req.user!.accountId]
+    [grnId, accountId]
   );
-  if (grnRes.rowCount === 0) return res.status(404).json({ error: "GRN not found" });
+  if (grnRes.rowCount === 0) return null;
   const grn = grnRes.rows[0];
 
   const linesRes = await pool.query(
     `SELECT COALESCE(i.name, gl.raw_item_name) AS name, i.unit, gl.received_qty, gl.received_amount
      FROM grn_lines gl LEFT JOIN items i ON i.id = gl.item_id WHERE gl.grn_id = $1`,
-    [req.params.id]
+    [grnId]
   );
 
   const total = linesRes.rows.reduce((s: number, l: any) => s + Number(l.received_amount), 0);
   const message = buildGrnWhatsAppMessage({
     invoiceNumber: grn.invoice_number,
+    branchName: grn.branch_name,
     vendorName: grn.vendor_name,
     poNumber: grn.po_number,
     receivedDate: grn.received_date ? new Date(grn.received_date).toISOString().slice(0, 10) : null,
@@ -180,8 +194,19 @@ grnsRouter.post("/:id/share-wa", requireAuth, async (req: AuthedRequest, res) =>
     total,
   });
   const waLink = buildWaLink(grn.whatsapp_number, message);
+  return { waLink, message, vendorWhatsapp: grn.whatsapp_number ?? null };
+}
 
-  res.json({ waLink, message, vendorWhatsapp: grn.whatsapp_number ?? null });
+grnsRouter.get("/:id/wa-preview", requireAuth, async (req: AuthedRequest, res) => {
+  const preview = await buildGrnWaPreview(req.user!.accountId, req.params.id as string);
+  if (!preview) return res.status(404).json({ error: "GRN not found" });
+  res.json(preview);
+});
+
+grnsRouter.post("/:id/share-wa", requireAuth, async (req: AuthedRequest, res) => {
+  const preview = await buildGrnWaPreview(req.user!.accountId, req.params.id as string);
+  if (!preview) return res.status(404).json({ error: "GRN not found" });
+  res.json(preview);
 });
 
 grnsRouter.put("/:id/review", requireAuth, async (req: AuthedRequest, res) => {

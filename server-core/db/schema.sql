@@ -48,9 +48,13 @@ CREATE TABLE IF NOT EXISTS vendors (
   whatsapp_number  TEXT,
   gstin            TEXT,
   lead_time_days   INTEGER,
+  poc_name         TEXT,
+  poc_number       TEXT,
   created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_vendors_account ON vendors(account_id);
+ALTER TABLE vendors ADD COLUMN IF NOT EXISTS poc_name TEXT;
+ALTER TABLE vendors ADD COLUMN IF NOT EXISTS poc_number TEXT;
 
 CREATE TABLE IF NOT EXISTS items (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -61,6 +65,7 @@ CREATE TABLE IF NOT EXISTS items (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_items_account ON items(account_id);
+ALTER TABLE vendors ADD COLUMN IF NOT EXISTS main_item_id UUID REFERENCES items(id);
 
 CREATE TABLE IF NOT EXISTS purchase_orders (
   id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),

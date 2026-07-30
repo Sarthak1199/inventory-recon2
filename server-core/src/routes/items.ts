@@ -42,6 +42,13 @@ itemsRouter.delete("/:id", requireAuth, async (req: AuthedRequest, res) => {
   res.status(204).end();
 });
 
+itemsRouter.get("/sample-csv", requireAuth, (_req, res) => {
+  const csv = "name,unit,category\nTomato,kg,Vegetables\nMilk,litre,Dairy\n";
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", "attachment; filename=items-sample.csv");
+  res.send(csv);
+});
+
 itemsRouter.post("/import-csv", requireAuth, uploadCsv.single("file"), async (req: AuthedRequest, res) => {
   if (!req.file) return res.status(400).json({ error: "file is required" });
   const records: Record<string, string>[] = parse(req.file.buffer, { columns: true, skip_empty_lines: true, trim: true });

@@ -152,7 +152,7 @@ dashboardRouter.get("/price-impact", requireAuth, async (req: AuthedRequest, res
 });
 
 dashboardRouter.get("/price-trend", requireAuth, async (req: AuthedRequest, res) => {
-  const { where, params } = buildFilters(req, "po");
+  const { where, params } = buildFilters(req, "g");
 
   const result = await pool.query(
     `SELECT i.id AS item_id, i.name AS item_name,
@@ -160,10 +160,8 @@ dashboardRouter.get("/price-trend", requireAuth, async (req: AuthedRequest, res)
             AVG(gl.unit_price) AS avg_price
      FROM grn_lines gl
      JOIN grns g ON g.id = gl.grn_id
-     JOIN po_lines pl ON pl.id = gl.po_line_id
-     JOIN purchase_orders po ON po.id = pl.po_id
-     JOIN items i ON i.id = pl.item_id
-     WHERE gl.is_off_po = false AND g.ocr_status = 'confirmed' AND g.received_date IS NOT NULL AND ${where}
+     JOIN items i ON i.id = gl.item_id
+     WHERE g.ocr_status = 'confirmed' AND g.received_date IS NOT NULL AND ${where}
      GROUP BY i.id, i.name, week
      ORDER BY week ASC`,
     params

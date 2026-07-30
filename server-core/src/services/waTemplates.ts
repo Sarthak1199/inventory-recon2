@@ -13,6 +13,8 @@ export interface PoLineForMessage {
 
 export function buildPoWhatsAppMessage(params: {
   poNumber: string;
+  branchName: string;
+  vendorName: string;
   lines: PoLineForMessage[];
   total: number;
   expectedDeliveryDate: string | null;
@@ -21,14 +23,18 @@ export function buildPoWhatsAppMessage(params: {
     .map((l) => `- ${l.name}: ${l.ordered_qty} ${l.unit} x Rs.${l.unit_price} = Rs.${l.ordered_amount}`)
     .join("\n");
   return (
-    `Purchase Order ${params.poNumber}\n\n${lineText}\n\n` +
-    `Total: Rs.${params.total.toFixed(2)}\n` +
+    `*Purchase Order: ${params.poNumber}*\n` +
+    `Branch: ${params.branchName}\n` +
+    `Vendor: ${params.vendorName}\n\n` +
+    `Items:\n${lineText}\n\n` +
+    `*Total: Rs.${params.total.toFixed(2)}*\n` +
     (params.expectedDeliveryDate ? `Expected delivery: ${params.expectedDeliveryDate}\n` : "")
   );
 }
 
 export function buildGrnWhatsAppMessage(params: {
   invoiceNumber: string | null;
+  branchName: string;
   vendorName: string | null;
   poNumber: string | null;
   receivedDate: string | null;
@@ -37,12 +43,13 @@ export function buildGrnWhatsAppMessage(params: {
 }): string {
   const lineText = params.lines.map((l) => `- ${l.name}: ${l.qty} ${l.unit}`).join("\n");
   return (
-    `GRN Confirmation${params.invoiceNumber ? ` (Invoice ${params.invoiceNumber})` : ""}\n` +
+    `*GRN Confirmation${params.invoiceNumber ? ` - ${params.invoiceNumber}` : ""}*\n` +
+    `Branch: ${params.branchName}\n` +
     (params.vendorName ? `Vendor: ${params.vendorName}\n` : "") +
     (params.poNumber ? `Linked PO: ${params.poNumber}\n` : "") +
     (params.receivedDate ? `Received: ${params.receivedDate}\n` : "") +
-    `\n${lineText}\n\n` +
-    `Total received value: Rs.${params.total.toFixed(2)}\n`
+    `\nItems:\n${lineText}\n\n` +
+    `*Total received value: Rs.${params.total.toFixed(2)}*\n`
   );
 }
 
