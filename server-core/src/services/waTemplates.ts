@@ -18,7 +18,6 @@ export function buildPoWhatsAppMessage(params: {
   lines: PoLineForMessage[];
   total: number;
   expectedDeliveryDate: string | null;
-  contactPhone?: string | null;
 }): string {
   const lineText = params.lines
     .map((l) => `- ${l.name}: ${l.ordered_qty} ${l.unit} x Rs.${l.unit_price} = Rs.${l.ordered_amount}`)
@@ -29,8 +28,7 @@ export function buildPoWhatsAppMessage(params: {
     `Vendor: ${params.vendorName}\n\n` +
     `Items:\n${lineText}\n\n` +
     `*Total: Rs.${params.total.toFixed(2)}*\n` +
-    (params.expectedDeliveryDate ? `Expected delivery: ${params.expectedDeliveryDate}\n` : "") +
-    (params.contactPhone ? `\nContact us: ${params.contactPhone}\n` : "")
+    (params.expectedDeliveryDate ? `Expected delivery: ${params.expectedDeliveryDate}\n` : "")
   );
 }
 
@@ -42,7 +40,6 @@ export function buildGrnWhatsAppMessage(params: {
   receivedDate: string | null;
   lines: { name: string; qty: number | string; unit: string }[];
   total: number;
-  contactPhone?: string | null;
 }): string {
   const lineText = params.lines.map((l) => `- ${l.name}: ${l.qty} ${l.unit}`).join("\n");
   return (
@@ -52,12 +49,11 @@ export function buildGrnWhatsAppMessage(params: {
     (params.poNumber ? `Linked PO: ${params.poNumber}\n` : "") +
     (params.receivedDate ? `Received: ${params.receivedDate}\n` : "") +
     `\nItems:\n${lineText}\n\n` +
-    `*Total received value: Rs.${params.total.toFixed(2)}*\n` +
-    (params.contactPhone ? `\nContact us: ${params.contactPhone}\n` : "")
+    `*Total received value: Rs.${params.total.toFixed(2)}*\n`
   );
 }
 
-export function buildWaLink(whatsappNumber: string | null | undefined, message: string): string | null {
-  const digits = (whatsappNumber ?? "").replace(/[^0-9]/g, "");
-  return digits ? `https://wa.me/${digits}?text=${encodeURIComponent(message)}` : null;
+/** No phone param on purpose: opens WhatsApp's own contact picker so the sender chooses the recipient. */
+export function buildWaLink(message: string): string {
+  return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
 }

@@ -152,11 +152,10 @@ purchaseOrdersRouter.post("/", requireAuth, async (req: AuthedRequest, res) => {
 
 async function buildPoWaPreview(accountId: string, poId: string) {
   const poRes = await pool.query(
-    `SELECT po.id, po.po_number, po.expected_delivery_date, po.status, v.name AS vendor_name, v.whatsapp_number, b.name AS branch_name, a.phone_number AS account_phone
+    `SELECT po.id, po.po_number, po.expected_delivery_date, po.status, v.name AS vendor_name, v.whatsapp_number, b.name AS branch_name
      FROM purchase_orders po
      JOIN vendors v ON v.id = po.vendor_id
      JOIN branches b ON b.id = po.branch_id
-     JOIN accounts a ON a.id = po.account_id
      WHERE po.id = $1 AND po.account_id = $2`,
     [poId, accountId]
   );
@@ -177,9 +176,8 @@ async function buildPoWaPreview(accountId: string, poId: string) {
     lines: linesRes.rows,
     total,
     expectedDeliveryDate: po.expected_delivery_date ? new Date(po.expected_delivery_date).toISOString().slice(0, 10) : null,
-    contactPhone: po.account_phone,
   });
-  const waLink = buildWaLink(po.account_phone, message);
+  const waLink = buildWaLink(message);
   return { waLink, message, vendorWhatsapp: po.whatsapp_number ?? null };
 }
 

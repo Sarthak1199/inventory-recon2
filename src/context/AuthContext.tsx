@@ -13,7 +13,6 @@ export interface Account {
   brand_name: string | null;
   logo_url: string | null;
   brand_hex_color: string;
-  phone_number: string | null;
   onboarding_status: "pending" | "in_progress" | "done";
   quest_dismissed: boolean;
 }

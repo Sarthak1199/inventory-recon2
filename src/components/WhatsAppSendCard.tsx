@@ -11,14 +11,12 @@ function WhatsAppIcon() {
 }
 
 export function WhatsAppSendCard({
-  hasWhatsapp,
   previewUrl,
   sendUrl,
   sentLabel,
   actionLabel,
   initialPreview,
 }: {
-  hasWhatsapp: boolean;
   previewUrl: string;
   sendUrl: string;
   sentLabel?: string;
@@ -27,17 +25,17 @@ export function WhatsAppSendCard({
 }) {
   const { showToast } = useToast();
   const [preview, setPreview] = useState<{ message: string; waLink: string | null } | null>(initialPreview ?? null);
-  const [loadingPreview, setLoadingPreview] = useState(initialPreview === undefined && hasWhatsapp);
+  const [loadingPreview, setLoadingPreview] = useState(initialPreview === undefined);
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    if (!hasWhatsapp || initialPreview !== undefined) {
+    if (initialPreview !== undefined) {
       setLoadingPreview(false);
       return;
     }
     api.get(previewUrl).then((res) => setPreview(res.data)).finally(() => setLoadingPreview(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [previewUrl, hasWhatsapp]);
+  }, [previewUrl]);
 
   async function handleSend() {
     setSending(true);
@@ -51,15 +49,6 @@ export function WhatsAppSendCard({
     } finally {
       setSending(false);
     }
-  }
-
-  if (!hasWhatsapp) {
-    return (
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <h2 className="mb-2 font-medium text-gray-900">WhatsApp</h2>
-        <p className="text-sm text-amber-600">Add your phone number above to enable sending on WhatsApp.</p>
-      </div>
-    );
   }
 
   return (

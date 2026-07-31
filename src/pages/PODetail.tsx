@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../lib/api";
-import { useAuth } from "../context/AuthContext";
 import { WhatsAppSendCard } from "../components/WhatsAppSendCard";
-import { RestaurantPhoneNumber } from "../components/RestaurantPhoneNumber";
 
 interface Line {
   id: string;
@@ -49,7 +47,6 @@ const STATUS_STYLES: Record<string, string> = {
 
 export function PODetail() {
   const { id } = useParams();
-  const { account } = useAuth();
   const [po, setPo] = useState<PODetailData | null>(null);
 
   useEffect(() => {
@@ -144,10 +141,7 @@ export function PODetail() {
         )}
       </div>
 
-      <RestaurantPhoneNumber />
-
       <WhatsAppSendCard
-        hasWhatsapp={!!account?.phone_number}
         previewUrl={`/purchase-orders/${id}/wa-preview`}
         sendUrl={`/purchase-orders/${id}/send`}
         sentLabel={po.sent_at ? `Last sent ${new Date(po.sent_at).toISOString().slice(0, 10)}` : undefined}

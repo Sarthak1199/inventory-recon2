@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../lib/api";
-import { useAuth } from "../context/AuthContext";
 import { WhatsAppSendCard } from "../components/WhatsAppSendCard";
-import { RestaurantPhoneNumber } from "../components/RestaurantPhoneNumber";
 
 interface GrnLine {
   id: string;
@@ -43,7 +41,6 @@ const STATUS_STYLES: Record<string, string> = {
 
 export function GRNDetail() {
   const { id } = useParams();
-  const { account } = useAuth();
   const [grn, setGrn] = useState<GrnDetailData | null>(null);
   const [imageFailed, setImageFailed] = useState(false);
 
@@ -136,10 +133,7 @@ export function GRNDetail() {
             <p className="mt-3 text-right text-sm font-semibold text-gray-900">Total: Rs.{total.toFixed(2)}</p>
           </div>
 
-          <RestaurantPhoneNumber />
-
           <WhatsAppSendCard
-            hasWhatsapp={!!account?.phone_number}
             previewUrl={`/grns/${id}/wa-preview`}
             sendUrl={`/grns/${id}/share-wa`}
             actionLabel="Share on WhatsApp"
