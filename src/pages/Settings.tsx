@@ -50,6 +50,9 @@ export function Settings() {
   const [vendorCsv, setVendorCsv] = useState<File | null>(null);
   const [itemCsv, setItemCsv] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
+  const [phoneEditingId, setPhoneEditingId] = useState<string | null>(null);
+  const [phoneInput, setPhoneInput] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
 
   function loadVendors() {
     api.get("/vendors").then((res) => setVendors(res.data));
@@ -88,6 +91,22 @@ export function Settings() {
     await api.delete(`/vendors/${id}`);
     loadVendors();
     showToast("Vendor removed.");
+  }
+
+  async function savePhoneNumber(id: string) {
+    if (!phoneInput.trim()) return;
+    setSavingPhone(true);
+    try {
+      await api.put(`/vendors/${id}`, { whatsapp_number: phoneInput.trim() });
+      showToast("Phone number saved.");
+      setPhoneEditingId(null);
+      setPhoneInput("");
+      loadVendors();
+    } catch {
+      showToast("Failed to save phone number.", "error");
+    } finally {
+      setSavingPhone(false);
+    }
   }
 
   async function uploadVendorCsv() {
@@ -230,14 +249,53 @@ export function Settings() {
         <div className="divide-y divide-gray-100 rounded-md border border-gray-100">
           {vendors.length === 0 && <p className="px-3 py-3 text-sm text-gray-400">No vendors yet.</p>}
           {vendors.map((v) => (
-            <div key={v.id} className="flex items-center justify-between px-3 py-2 text-sm">
-              <div>
+            <div key={v.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+              <div className="min-w-0">
                 <span className="font-medium text-gray-900">{v.name}</span>
                 {v.whatsapp_number && <span className="ml-2 text-gray-400">{v.whatsapp_number}</span>}
                 {v.poc_name && <span className="ml-2 text-gray-400">POC: {v.poc_name}{v.poc_number ? ` (${v.poc_number})` : ""}</span>}
                 {v.description && <span className="ml-2 text-gray-400">{v.description}</span>}
+                {!v.whatsapp_number && (
+                  phoneEditingId === v.id ? (
+                    <span className="ml-2 inline-flex items-center gap-1.5">
+                      <input
+                        autoFocus
+                        value={phoneInput}
+                        onChange={(e) => setPhoneInput(e.target.value)}
+                        placeholder="+91..."
+                        className="w-32 rounded-md border border-gray-300 px-2 py-1 text-xs"
+                      />
+                      <button
+                        onClick={() => savePhoneNumber(v.id)}
+                        disabled={!phoneInput.trim() || savingPhone}
+                        className="rounded-md bg-brand px-2 py-1 text-xs font-medium text-white disabled:opacity-60"
+                      >
+                        {savingPhone ? "Saving..." : "Save"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPhoneEditingId(null);
+                          setPhoneInput("");
+                        }}
+                        className="text-xs text-gray-400 hover:text-gray-600"
+                      >
+                        Cancel
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setPhoneEditingId(v.id);
+                        setPhoneInput("");
+                      }}
+                      className="ml-2 text-xs text-brand hover:underline"
+                    >
+                      + Add phone number
+                    </button>
+                  )
+                )}
               </div>
-              <button onClick={() => deleteVendor(v.id)} className="text-xs text-red-500 hover:text-red-700">
+              <button onClick={() => deleteVendor(v.id)} className="shrink-0 text-xs text-red-500 hover:text-red-700">
                 Remove
               </button>
             </div>

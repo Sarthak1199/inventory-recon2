@@ -24,6 +24,7 @@ interface GrnDetailData {
   ocr_status: string;
   file_url: string;
   branch_name: string;
+  vendor_id: string | null;
   vendor_name: string | null;
   vendor_whatsapp: string | null;
   po_number: string | null;
@@ -109,22 +110,22 @@ export function GRNDetail() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase text-gray-400">
-                  <th className="py-1">Item</th>
-                  <th className="py-1">Qty</th>
-                  <th className="py-1">Price</th>
-                  <th className="py-1">Amount</th>
+                  <th className="py-1 pr-3">Item</th>
+                  <th className="py-1 px-3 text-right">Qty</th>
+                  <th className="py-1 px-3 text-right">Price</th>
+                  <th className="py-1 pl-3 text-right">Amount</th>
                 </tr>
               </thead>
               <tbody>
                 {grn.lines.map((l) => (
                   <tr key={l.id} className="border-t border-gray-50">
-                    <td className="py-1">
+                    <td className="py-1.5 pr-3">
                       {l.item_name ?? l.raw_item_name ?? "Unmatched"}
                       {l.is_off_po && <span className="ml-1 rounded bg-amber-50 px-1 text-[10px] text-amber-600">off-PO</span>}
                     </td>
-                    <td className="py-1">{l.received_qty} {l.unit ?? ""}</td>
-                    <td className="py-1">Rs.{l.unit_price}</td>
-                    <td className="py-1">Rs.{l.received_amount}</td>
+                    <td className="py-1.5 px-3 text-right whitespace-nowrap">{l.received_qty} {l.unit ?? ""}</td>
+                    <td className="py-1.5 px-3 text-right whitespace-nowrap">Rs.{l.unit_price}</td>
+                    <td className="py-1.5 pl-3 text-right whitespace-nowrap">Rs.{l.received_amount}</td>
                   </tr>
                 ))}
               </tbody>
@@ -134,6 +135,7 @@ export function GRNDetail() {
 
           <WhatsAppSendCard
             hasWhatsapp={!!grn.vendor_whatsapp}
+            vendorId={grn.vendor_id}
             previewUrl={`/grns/${id}/wa-preview`}
             sendUrl={`/grns/${id}/share-wa`}
             actionLabel="Share on WhatsApp"

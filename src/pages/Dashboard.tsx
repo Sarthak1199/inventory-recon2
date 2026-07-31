@@ -53,7 +53,11 @@ interface PayableInvoice {
   poNumber: string;
   createdAt: string;
   status: string;
-  amount: number;
+  itemName: string;
+  unit: string;
+  qty: number;
+  unitPrice: number;
+  lineAmount: number;
 }
 
 interface Vendor {
@@ -159,11 +163,14 @@ export function Dashboard() {
   }, [branchFilter, vendorFilter, dateRange]);
 
   function downloadPayablesCsv() {
-    const header = "Vendor,PO Number,Created,Status,Amount\n";
+    const header = "Vendor,PO Number,Created,Status,Item,Qty,Unit,Unit Price,Line Amount\n";
     const body = payableInvoices
-      .map((r) => `"${r.vendorName}","${r.poNumber}",${r.createdAt?.slice(0, 10)},${r.status},${r.amount.toFixed(2)}`)
+      .map(
+        (r) =>
+          `"${r.vendorName}","${r.poNumber}",${r.createdAt?.slice(0, 10)},${r.status},"${r.itemName}",${r.qty},${r.unit},${r.unitPrice.toFixed(2)},${r.lineAmount.toFixed(2)}`
+      )
       .join("\n");
-    const footer = `\n"Total spend",,,,${totalSpend.toFixed(2)}`;
+    const footer = `\n"Total spend",,,,,,,,${totalSpend.toFixed(2)}`;
     const blob = new Blob([header + body + footer], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

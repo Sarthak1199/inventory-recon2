@@ -216,11 +216,14 @@ dashboardRouter.get("/payables", requireAuth, async (req: AuthedRequest, res) =>
 
   const invoicesWhere = buildFilters(req, "po");
   const invoicesRes = await pool.query(
-    `SELECT v.name AS vendor_name, po.po_number, po.created_at, po.status, po.total_amount
+    `SELECT v.name AS vendor_name, po.po_number, po.created_at, po.status,
+            i.name AS item_name, pl.ordered_qty, i.unit, pl.unit_price, pl.ordered_amount
      FROM purchase_orders po
      JOIN vendors v ON v.id = po.vendor_id
+     JOIN po_lines pl ON pl.po_id = po.id
+     JOIN items i ON i.id = pl.item_id
      WHERE po.status IN ('sent', 'partially_received', 'received') AND ${invoicesWhere.where}
-     ORDER BY v.name, po.created_at DESC`,
+     ORDER BY v.name, po.created_at DESC, i.name`,
     invoicesWhere.params
   );
   const invoices = invoicesRes.rows.map((r: any) => ({
@@ -228,7 +231,11 @@ dashboardRouter.get("/payables", requireAuth, async (req: AuthedRequest, res) =>
     poNumber: r.po_number,
     createdAt: r.created_at,
     status: r.status,
-    amount: Number(r.total_amount),
+    itemName: r.item_name,
+    unit: r.unit,
+    qty: Number(r.ordered_qty),
+    unitPrice: Number(r.unit_price),
+    lineAmount: Number(r.ordered_amount),
   }));
 
   const totalSpend = rows.reduce((s, r) => s + r.amountPayable, 0);

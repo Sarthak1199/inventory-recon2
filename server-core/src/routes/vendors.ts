@@ -39,14 +39,16 @@ vendorsRouter.post("/", requireAuth, async (req: AuthedRequest, res) => {
 vendorsRouter.put("/:id", requireAuth, async (req: AuthedRequest, res) => {
   const { name, whatsapp_number, gstin, lead_time_days, poc_name, poc_number, description } = req.body ?? {};
   const result = await pool.query(
-    `UPDATE vendors SET name = COALESCE($3, name), whatsapp_number = $4, gstin = $5, lead_time_days = $6,
-            poc_name = $7, poc_number = $8, description = $9
+    `UPDATE vendors SET name = COALESCE($3, name), whatsapp_number = COALESCE($4, whatsapp_number),
+            gstin = COALESCE($5, gstin), lead_time_days = COALESCE($6, lead_time_days),
+            poc_name = COALESCE($7, poc_name), poc_number = COALESCE($8, poc_number),
+            description = COALESCE($9, description)
      WHERE id = $1 AND account_id = $2
      RETURNING id, name, whatsapp_number, gstin, lead_time_days, poc_name, poc_number, description`,
     [
       req.params.id,
       req.user!.accountId,
-      name,
+      name ?? null,
       whatsapp_number ?? null,
       gstin ?? null,
       lead_time_days ?? null,

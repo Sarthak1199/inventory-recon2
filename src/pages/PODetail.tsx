@@ -28,6 +28,7 @@ interface PODetailData {
   expected_delivery_date: string | null;
   sent_at: string | null;
   total_amount: string;
+  vendor_id: string;
   vendor_name: string;
   vendor_whatsapp: string | null;
   branch_name: string;
@@ -142,6 +143,7 @@ export function PODetail() {
 
       <WhatsAppSendCard
         hasWhatsapp={!!po.vendor_whatsapp}
+        vendorId={po.vendor_id}
         previewUrl={`/purchase-orders/${id}/wa-preview`}
         sendUrl={`/purchase-orders/${id}/send`}
         sentLabel={po.sent_at ? `Last sent ${new Date(po.sent_at).toISOString().slice(0, 10)}` : undefined}
