@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
 import { WhatsAppSendCard } from "../components/WhatsAppSendCard";
 import { RestaurantPhoneNumber } from "../components/RestaurantPhoneNumber";
 
@@ -42,6 +43,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 export function GRNDetail() {
   const { id } = useParams();
+  const { account } = useAuth();
   const [grn, setGrn] = useState<GrnDetailData | null>(null);
   const [imageFailed, setImageFailed] = useState(false);
 
@@ -137,8 +139,7 @@ export function GRNDetail() {
           <RestaurantPhoneNumber />
 
           <WhatsAppSendCard
-            hasWhatsapp={!!grn.vendor_whatsapp}
-            vendorId={grn.vendor_id}
+            hasWhatsapp={!!account?.phone_number}
             previewUrl={`/grns/${id}/wa-preview`}
             sendUrl={`/grns/${id}/share-wa`}
             actionLabel="Share on WhatsApp"

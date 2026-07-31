@@ -12,7 +12,6 @@ function WhatsAppIcon() {
 
 export function WhatsAppSendCard({
   hasWhatsapp,
-  vendorId,
   previewUrl,
   sendUrl,
   sentLabel,
@@ -20,7 +19,6 @@ export function WhatsAppSendCard({
   initialPreview,
 }: {
   hasWhatsapp: boolean;
-  vendorId?: string | null;
   previewUrl: string;
   sendUrl: string;
   sentLabel?: string;
@@ -28,37 +26,18 @@ export function WhatsAppSendCard({
   initialPreview?: { message: string; waLink: string | null } | null;
 }) {
   const { showToast } = useToast();
-  const [numberAdded, setNumberAdded] = useState(false);
-  const [phoneInput, setPhoneInput] = useState("");
-  const [savingPhone, setSavingPhone] = useState(false);
-  const effectiveHasWhatsapp = hasWhatsapp || numberAdded;
   const [preview, setPreview] = useState<{ message: string; waLink: string | null } | null>(initialPreview ?? null);
-  const [loadingPreview, setLoadingPreview] = useState(initialPreview === undefined && effectiveHasWhatsapp);
+  const [loadingPreview, setLoadingPreview] = useState(initialPreview === undefined && hasWhatsapp);
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    if (!effectiveHasWhatsapp || (initialPreview !== undefined && !numberAdded)) {
+    if (!hasWhatsapp || initialPreview !== undefined) {
       setLoadingPreview(false);
       return;
     }
-    setLoadingPreview(true);
     api.get(previewUrl).then((res) => setPreview(res.data)).finally(() => setLoadingPreview(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [previewUrl, effectiveHasWhatsapp, numberAdded]);
-
-  async function handleSavePhone() {
-    if (!vendorId || !phoneInput.trim()) return;
-    setSavingPhone(true);
-    try {
-      await api.put(`/vendors/${vendorId}`, { whatsapp_number: phoneInput.trim() });
-      showToast("Phone number saved.");
-      setNumberAdded(true);
-    } catch {
-      showToast("Failed to save phone number.", "error");
-    } finally {
-      setSavingPhone(false);
-    }
-  }
+  }, [previewUrl, hasWhatsapp]);
 
   async function handleSend() {
     setSending(true);
@@ -74,28 +53,11 @@ export function WhatsAppSendCard({
     }
   }
 
-  if (!effectiveHasWhatsapp) {
+  if (!hasWhatsapp) {
     return (
       <div className="rounded-lg border border-gray-200 bg-white p-4">
         <h2 className="mb-2 font-medium text-gray-900">WhatsApp</h2>
-        <p className="mb-3 text-sm text-amber-600">Vendor has no WhatsApp number on file.</p>
-        {vendorId && (
-          <div className="flex gap-2">
-            <input
-              value={phoneInput}
-              onChange={(e) => setPhoneInput(e.target.value)}
-              placeholder="+91..."
-              className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
-            <button
-              onClick={handleSavePhone}
-              disabled={!phoneInput.trim() || savingPhone}
-              className="shrink-0 rounded-md bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-            >
-              {savingPhone ? "Saving..." : "Add phone number"}
-            </button>
-          </div>
-        )}
+        <p className="text-sm text-amber-600">Add your phone number above to enable sending on WhatsApp.</p>
       </div>
     );
   }

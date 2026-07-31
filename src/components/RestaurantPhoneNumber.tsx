@@ -18,7 +18,7 @@ export function RestaurantPhoneNumber() {
       formData.append("phone_number", value.trim());
       await api.post("/onboarding/setup", formData, { headers: { "Content-Type": "multipart/form-data" } });
       await refresh();
-      showToast("Restaurant phone number saved.");
+      showToast("Your phone number saved.");
       setEditing(false);
     } catch {
       showToast("Failed to save phone number.", "error");
@@ -31,7 +31,7 @@ export function RestaurantPhoneNumber() {
     return (
       <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4">
         <div>
-          <h2 className="font-medium text-gray-900">Restaurant phone number</h2>
+          <h2 className="font-medium text-gray-900">Your phone number</h2>
           <p className="text-sm text-gray-500">{account.phone_number}</p>
         </div>
         <button
@@ -49,8 +49,8 @@ export function RestaurantPhoneNumber() {
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4">
-      <h2 className="mb-1 font-medium text-gray-900">Restaurant phone number</h2>
-      <p className="mb-3 text-xs text-gray-500">Shown to vendors as your contact number on WhatsApp messages.</p>
+      <h2 className="mb-1 font-medium text-gray-900">Your phone number</h2>
+      <p className="mb-3 text-xs text-gray-500">Send POs and invoices from WhatsApp in a click.</p>
       <div className="flex gap-2">
         <input
           value={value}

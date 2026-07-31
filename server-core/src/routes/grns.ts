@@ -164,7 +164,7 @@ grnsRouter.get("/:id", requireAuth, async (req: AuthedRequest, res) => {
     `SELECT gl.*, i.name AS item_name, i.unit FROM grn_lines gl LEFT JOIN items i ON i.id = gl.item_id WHERE gl.grn_id = $1`,
     [req.params.id]
   );
-  const waPreview = grnRes.rows[0].vendor_whatsapp ? await buildGrnWaPreview(req.user!.accountId, req.params.id as string) : null;
+  const waPreview = await buildGrnWaPreview(req.user!.accountId, req.params.id as string);
   res.json({ ...grnRes.rows[0], lines: linesRes.rows, waPreview });
 });
 
@@ -199,7 +199,7 @@ async function buildGrnWaPreview(accountId: string, grnId: string) {
     total,
     contactPhone: grn.account_phone,
   });
-  const waLink = buildWaLink(grn.whatsapp_number, message);
+  const waLink = buildWaLink(grn.account_phone, message);
   return { waLink, message, vendorWhatsapp: grn.whatsapp_number ?? null };
 }
 

@@ -100,7 +100,7 @@ purchaseOrdersRouter.get("/:id", requireAuth, async (req: AuthedRequest, res) =>
   );
 
   const comparisonRes = await pool.query(`SELECT * FROM po_comparisons WHERE po_id = $1`, [req.params.id]);
-  const waPreview = poRes.rows[0].vendor_whatsapp ? await buildPoWaPreview(req.user!.accountId, req.params.id as string) : null;
+  const waPreview = await buildPoWaPreview(req.user!.accountId, req.params.id as string);
 
   res.json({ ...poRes.rows[0], lines: linesRes.rows, comparison: comparisonRes.rows[0] ?? null, waPreview });
 });
@@ -179,7 +179,7 @@ async function buildPoWaPreview(accountId: string, poId: string) {
     expectedDeliveryDate: po.expected_delivery_date ? new Date(po.expected_delivery_date).toISOString().slice(0, 10) : null,
     contactPhone: po.account_phone,
   });
-  const waLink = buildWaLink(po.whatsapp_number, message);
+  const waLink = buildWaLink(po.account_phone, message);
   return { waLink, message, vendorWhatsapp: po.whatsapp_number ?? null };
 }
 
