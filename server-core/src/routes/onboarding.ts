@@ -7,7 +7,7 @@ import { saveUpload } from "../services/storage.js";
 export const onboardingRouter = Router();
 
 onboardingRouter.post("/setup", requireAuth, uploadLogo.single("logo"), async (req: AuthedRequest, res) => {
-  const { brand_name, brand_hex_color } = req.body ?? {};
+  const { brand_name, brand_hex_color, phone_number } = req.body ?? {};
   const logoUrl = req.file ? await saveUpload("logos", req.file.originalname, req.file.buffer, req.file.mimetype) : null;
 
   const result = await pool.query(
@@ -15,10 +15,11 @@ onboardingRouter.post("/setup", requireAuth, uploadLogo.single("logo"), async (r
      SET brand_name = COALESCE($2, brand_name),
          brand_hex_color = COALESCE($3, brand_hex_color),
          logo_url = COALESCE($4, logo_url),
+         phone_number = COALESCE($5, phone_number),
          onboarding_status = 'done'
      WHERE id = $1
-     RETURNING id, name, brand_name, logo_url, brand_hex_color, onboarding_status`,
-    [req.user!.accountId, brand_name ?? null, brand_hex_color ?? null, logoUrl]
+     RETURNING id, name, brand_name, logo_url, brand_hex_color, phone_number, onboarding_status`,
+    [req.user!.accountId, brand_name ?? null, brand_hex_color ?? null, logoUrl, phone_number ?? null]
   );
   res.json(result.rows[0]);
 });

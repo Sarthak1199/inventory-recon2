@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { WhatsAppSendCard } from "../components/WhatsAppSendCard";
+import { RestaurantPhoneNumber } from "../components/RestaurantPhoneNumber";
 
 interface Line {
   id: string;
@@ -140,6 +141,8 @@ export function PODetail() {
           </div>
         )}
       </div>
+
+      <RestaurantPhoneNumber />
 
       <WhatsAppSendCard
         hasWhatsapp={!!po.vendor_whatsapp}

@@ -170,11 +170,12 @@ grnsRouter.get("/:id", requireAuth, async (req: AuthedRequest, res) => {
 
 async function buildGrnWaPreview(accountId: string, grnId: string) {
   const grnRes = await pool.query(
-    `SELECT g.invoice_number, g.received_date, po.po_number, v.name AS vendor_name, v.whatsapp_number, b.name AS branch_name
+    `SELECT g.invoice_number, g.received_date, po.po_number, v.name AS vendor_name, v.whatsapp_number, b.name AS branch_name, a.phone_number AS account_phone
      FROM grns g
      LEFT JOIN purchase_orders po ON po.id = g.po_id
      LEFT JOIN vendors v ON v.id = g.vendor_id
      JOIN branches b ON b.id = g.branch_id
+     JOIN accounts a ON a.id = g.account_id
      WHERE g.id = $1 AND g.account_id = $2`,
     [grnId, accountId]
   );
@@ -196,6 +197,7 @@ async function buildGrnWaPreview(accountId: string, grnId: string) {
     receivedDate: grn.received_date ? new Date(grn.received_date).toISOString().slice(0, 10) : null,
     lines: linesRes.rows.map((l: any) => ({ name: l.name ?? "Item", qty: l.received_qty, unit: l.unit ?? "" })),
     total,
+    contactPhone: grn.account_phone,
   });
   const waLink = buildWaLink(grn.whatsapp_number, message);
   return { waLink, message, vendorWhatsapp: grn.whatsapp_number ?? null };

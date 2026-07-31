@@ -6,11 +6,13 @@ CREATE TABLE IF NOT EXISTS accounts (
   brand_name          TEXT,
   logo_url            TEXT,
   brand_hex_color     TEXT DEFAULT '#4F46E5',
+  phone_number        TEXT,
   price_tolerance_pct NUMERIC(5,2) NOT NULL DEFAULT 1.00,
   onboarding_status   TEXT NOT NULL DEFAULT 'pending' CHECK (onboarding_status IN ('pending','in_progress','done')),
   quest_dismissed     BOOLEAN NOT NULL DEFAULT FALSE,
   created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS phone_number TEXT;
 
 CREATE TABLE IF NOT EXISTS branches (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),

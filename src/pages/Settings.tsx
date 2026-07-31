@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { AddVendorModal } from "../components/AddVendorModal";
+import { RestaurantPhoneNumber } from "../components/RestaurantPhoneNumber";
 import { SkeletonTable } from "../components/Skeleton";
 
 interface Vendor {
@@ -221,6 +222,8 @@ export function Settings() {
           {savingBrand ? "Saving..." : "Save branding"}
         </button>
       </form>
+
+      <RestaurantPhoneNumber />
 
       <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
         <div className="flex items-center justify-between">

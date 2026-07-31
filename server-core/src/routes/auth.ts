@@ -75,7 +75,7 @@ authRouter.post("/logout", (req, res) => {
 
 authRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
   const account = await pool.query(
-    `SELECT id, name, brand_name, logo_url, brand_hex_color, onboarding_status, quest_dismissed FROM accounts WHERE id = $1`,
+    `SELECT id, name, brand_name, logo_url, brand_hex_color, phone_number, onboarding_status, quest_dismissed FROM accounts WHERE id = $1`,
     [req.user!.accountId]
   );
   const branches = await pool.query(
