@@ -16,8 +16,10 @@ import {
 } from "recharts";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import { DateRangeFilter, type DateRange } from "../components/DateRangeFilter";
 import { SkeletonCard, SkeletonTable } from "../components/Skeleton";
+import { AddBranchModal } from "../components/AddBranchModal";
 
 interface Kpis {
   onTime: { pct: number | null; breakdown: { early: number; on_time: number; late: number }; count: number };
@@ -121,7 +123,9 @@ function KpiPie({
 }
 
 export function Dashboard() {
-  const { branches } = useAuth();
+  const { branches, refresh } = useAuth();
+  const { showToast } = useToast();
+  const [showAddBranch, setShowAddBranch] = useState(false);
   const [branchFilter, setBranchFilter] = useState("all");
   const [vendorFilter, setVendorFilter] = useState("");
   const [dateRange, setDateRange] = useState<DateRange>({ from: "", to: "" });
@@ -182,6 +186,17 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {showAddBranch && (
+        <AddBranchModal
+          onClose={() => setShowAddBranch(false)}
+          onCreated={async (b) => {
+            await refresh();
+            setBranchFilter(b.id);
+            showToast(`Branch "${b.name}" added.`);
+          }}
+        />
+      )}
+
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -210,6 +225,12 @@ export function Dashboard() {
             ))}
           </select>
           <DateRangeFilter value={dateRange} onChange={setDateRange} />
+          <button
+            onClick={() => setShowAddBranch(true)}
+            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            + Add branch
+          </button>
         </div>
       </div>
 

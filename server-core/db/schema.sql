@@ -21,10 +21,14 @@ CREATE TABLE IF NOT EXISTS branches (
   code             TEXT NOT NULL,
   address          TEXT,
   whatsapp_number  TEXT,
+  manager_name     TEXT,
+  manager_phone    TEXT,
   created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (account_id, code)
 );
 CREATE INDEX IF NOT EXISTS idx_branches_account ON branches(account_id);
+ALTER TABLE branches ADD COLUMN IF NOT EXISTS manager_name TEXT;
+ALTER TABLE branches ADD COLUMN IF NOT EXISTS manager_phone TEXT;
 
 CREATE TABLE IF NOT EXISTS users (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),

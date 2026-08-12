@@ -48,10 +48,11 @@ function downloadSampleCsv() {
 }
 
 export function CreatePO() {
-  const { activeBranchId } = useAuth();
+  const { activeBranchId, branches } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
+  const [branchId, setBranchId] = useState(activeBranchId ?? "");
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [vendorId, setVendorId] = useState("");
@@ -74,6 +75,10 @@ export function CreatePO() {
     api.get("/vendors").then((res) => setVendors(res.data));
     api.get("/items").then((res) => setItems(res.data));
   }, []);
+
+  useEffect(() => {
+    if (!branchId && activeBranchId) setBranchId(activeBranchId);
+  }, [activeBranchId, branchId]);
 
   const filteredItems = useMemo(
     () => items.filter((i) => i.name.toLowerCase().includes(itemSearch.toLowerCase())),
@@ -130,14 +135,14 @@ export function CreatePO() {
 
   async function handleSubmit() {
     setError(null);
-    if (!activeBranchId) return setError("No active branch selected.");
+    if (!branchId) return setError("Select a branch.");
     if (!vendorId) return setError("Select a vendor.");
     if (lines.length === 0) return setError("Add at least one line item.");
 
     setSubmitting(true);
     try {
       const res = await api.post("/purchase-orders", {
-        branchId: activeBranchId,
+        branchId,
         vendorId,
         expectedDeliveryDate: expectedDeliveryDate || null,
         lines: lines.map((l) => ({ itemId: l.itemId, orderedQty: l.orderedQty, unitPrice: l.unitPrice })),
@@ -166,6 +171,15 @@ export function CreatePO() {
       <h1 className="text-xl font-semibold text-gray-900">Create Purchase Order</h1>
 
       <div className="grid grid-cols-1 gap-4 rounded-lg border border-gray-200 bg-white p-6 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Branch</label>
+          <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+            <option value="">Select branch</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Vendor</label>
           <div className="flex gap-2">

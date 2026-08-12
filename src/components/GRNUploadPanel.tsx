@@ -36,9 +36,10 @@ interface ExtractedLine {
 }
 
 export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
-  const { activeBranchId } = useAuth();
+  const { activeBranchId, branches } = useAuth();
   const { showToast } = useToast();
 
+  const [branchId, setBranchId] = useState(activeBranchId ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [openPos, setOpenPos] = useState<OpenPo[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -58,12 +59,20 @@ export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSa
   const [showAddVendor, setShowAddVendor] = useState(false);
 
   useEffect(() => {
-    api.get("/purchase-orders", { params: { branchId: activeBranchId } }).then((res) =>
+    if (!branchId && activeBranchId) setBranchId(activeBranchId);
+  }, [activeBranchId, branchId]);
+
+  useEffect(() => {
+    if (!branchId) return;
+    api.get("/purchase-orders", { params: { branchId } }).then((res) =>
       setOpenPos(res.data.filter((p: any) => p.status === "sent" || p.status === "partially_received"))
     );
+  }, [branchId]);
+
+  useEffect(() => {
     api.get("/vendors").then((res) => setVendors(res.data));
     api.get("/items").then((res) => setItems(res.data));
-  }, [activeBranchId]);
+  }, []);
 
   function handleFileSelect(f: File | null) {
     setError(null);
@@ -76,12 +85,16 @@ export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSa
 
   async function handleUpload() {
     if (!file) return;
+    if (!branchId) {
+      setError("Select a branch.");
+      return;
+    }
     setUploading(true);
     setError(null);
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("branchId", activeBranchId ?? "");
+      formData.append("branchId", branchId);
 
       const res = await api.post("/grns/upload", formData, { headers: { "Content-Type": "multipart/form-data" } });
       setGrnId(res.data.grnId);
@@ -176,7 +189,16 @@ export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSa
                 <p className="text-xs text-gray-500">Reading line items, prices, and vendor details</p>
               </div>
             ) : (
-              <div>
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Branch</label>
+                  <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+                    <option value="">Select branch</option>
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">File (image or PDF)</label>
                 <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border-2 border-dashed border-brand/40 bg-brand/5 px-4 py-10 text-sm font-medium text-brand transition hover:border-brand hover:bg-brand/10">
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -3,7 +3,16 @@ import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { AddVendorModal } from "../components/AddVendorModal";
+import { AddBranchModal } from "../components/AddBranchModal";
 import { SkeletonTable } from "../components/Skeleton";
+
+interface Branch {
+  id: string;
+  name: string;
+  code: string;
+  manager_name: string | null;
+  manager_phone: string | null;
+}
 
 interface Vendor {
   id: string;
@@ -42,6 +51,8 @@ export function Settings() {
   const [savingBrand, setSavingBrand] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [showAddBranch, setShowAddBranch] = useState(false);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [showAddVendor, setShowAddVendor] = useState(false);
@@ -54,6 +65,9 @@ export function Settings() {
   const [phoneInput, setPhoneInput] = useState("");
   const [savingPhone, setSavingPhone] = useState(false);
 
+  function loadBranches() {
+    api.get("/branches").then((res) => setBranches(res.data));
+  }
   function loadVendors() {
     api.get("/vendors").then((res) => setVendors(res.data));
   }
@@ -61,8 +75,9 @@ export function Settings() {
     api.get("/items").then((res) => setItems(res.data));
   }
   useEffect(() => {
-    Promise.all([api.get("/vendors"), api.get("/items")])
-      .then(([vendorsRes, itemsRes]) => {
+    Promise.all([api.get("/branches"), api.get("/vendors"), api.get("/items")])
+      .then(([branchesRes, vendorsRes, itemsRes]) => {
+        setBranches(branchesRes.data);
         setVendors(vendorsRes.data);
         setItems(itemsRes.data);
       })
@@ -164,6 +179,17 @@ export function Settings() {
         />
       )}
 
+      {showAddBranch && (
+        <AddBranchModal
+          onClose={() => setShowAddBranch(false)}
+          onCreated={async (b) => {
+            loadBranches();
+            await refresh();
+            showToast(`Branch "${b.name}" added.`);
+          }}
+        />
+      )}
+
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Settings</h1>
         <p className="text-sm text-gray-500">Manage your branding, vendors, and item master here at any time.</p>
@@ -221,6 +247,31 @@ export function Settings() {
           {savingBrand ? "Saving..." : "Save branding"}
         </button>
       </form>
+
+      <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
+        <div className="flex items-center justify-between">
+          <h2 className="font-medium text-gray-900">Branches</h2>
+          <button onClick={() => setShowAddBranch(true)} className="rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-white">
+            + Add branch
+          </button>
+        </div>
+        {loading ? (
+          <SkeletonTable rows={2} cols={2} />
+        ) : (
+          <div className="divide-y divide-gray-100 rounded-md border border-gray-100">
+            {branches.length === 0 && <p className="px-3 py-3 text-sm text-gray-400">No branches yet.</p>}
+            {branches.map((b) => (
+              <div key={b.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                <div className="min-w-0">
+                  <span className="font-medium text-gray-900">{b.name}</span>
+                  <span className="ml-2 text-gray-400">{b.code}</span>
+                  {b.manager_name && <span className="ml-2 text-gray-400">Manager: {b.manager_name}{b.manager_phone ? ` (${b.manager_phone})` : ""}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
         <div className="flex items-center justify-between">
