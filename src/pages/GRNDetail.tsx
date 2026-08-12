@@ -13,6 +13,11 @@ interface GrnLine {
   received_amount: string;
   is_off_po: boolean;
   match_type: string;
+  hsn_code: string | null;
+  cgst_pct: string | null;
+  sgst_pct: string | null;
+  cgst_amount: string | null;
+  sgst_amount: string | null;
 }
 
 interface GrnDetailData {
@@ -29,6 +34,11 @@ interface GrnDetailData {
   vendor_whatsapp: string | null;
   po_number: string | null;
   lines: GrnLine[];
+  subtotal_amount: string | null;
+  total_cgst: string | null;
+  total_sgst: string | null;
+  total_gst: string | null;
+  bill_total: string | null;
   waPreview: { message: string; waLink: string | null } | null;
 }
 
@@ -57,7 +67,11 @@ export function GRNDetail() {
     );
   }
 
-  const total = grn.lines.reduce((s, l) => s + Number(l.received_amount), 0);
+  const subtotal = grn.subtotal_amount != null ? Number(grn.subtotal_amount) : grn.lines.reduce((s, l) => s + Number(l.received_amount), 0);
+  const totalCgst = grn.total_cgst != null ? Number(grn.total_cgst) : grn.lines.reduce((s, l) => s + Number(l.cgst_amount ?? 0), 0);
+  const totalSgst = grn.total_sgst != null ? Number(grn.total_sgst) : grn.lines.reduce((s, l) => s + Number(l.sgst_amount ?? 0), 0);
+  const totalGst = grn.total_gst != null ? Number(grn.total_gst) : totalCgst + totalSgst;
+  const billTotal = grn.bill_total != null ? Number(grn.bill_total) : subtotal + totalGst;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -107,30 +121,59 @@ export function GRNDetail() {
 
           <div className="rounded-lg border border-gray-200 bg-white p-4">
             <h2 className="mb-2 font-medium text-gray-900">Line items</h2>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs uppercase text-gray-400">
-                  <th className="py-1 pr-3">Item</th>
-                  <th className="py-1 px-3 text-right">Qty</th>
-                  <th className="py-1 px-3 text-right">Price</th>
-                  <th className="py-1 pl-3 text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {grn.lines.map((l) => (
-                  <tr key={l.id} className="border-t border-gray-50">
-                    <td className="py-1.5 pr-3">
-                      {l.item_name ?? l.raw_item_name ?? "Unmatched"}
-                      {l.is_off_po && <span className="ml-1 rounded bg-amber-50 px-1 text-[10px] text-amber-600">off-PO</span>}
-                    </td>
-                    <td className="py-1.5 px-3 text-right whitespace-nowrap">{l.received_qty} {l.unit ?? ""}</td>
-                    <td className="py-1.5 px-3 text-right whitespace-nowrap">Rs.{l.unit_price}</td>
-                    <td className="py-1.5 pl-3 text-right whitespace-nowrap">Rs.{l.received_amount}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] text-sm">
+                <thead>
+                  <tr className="text-left text-xs uppercase text-gray-400">
+                    <th className="py-1 pr-3">Item</th>
+                    <th className="py-1 px-3">HSN</th>
+                    <th className="py-1 px-3 text-right">Qty</th>
+                    <th className="py-1 px-3 text-right">Price</th>
+                    <th className="py-1 px-3 text-right">GST%</th>
+                    <th className="py-1 pl-3 text-right">Amount</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className="mt-3 text-right text-sm font-semibold text-gray-900">Total: Rs.{total.toFixed(2)}</p>
+                </thead>
+                <tbody>
+                  {grn.lines.map((l) => (
+                    <tr key={l.id} className="border-t border-gray-50">
+                      <td className="py-1.5 pr-3 whitespace-nowrap">
+                        {l.item_name ?? l.raw_item_name ?? "Unmatched"}
+                        {l.is_off_po && <span className="ml-1 rounded bg-amber-50 px-1 text-[10px] text-amber-600">off-PO</span>}
+                      </td>
+                      <td className="py-1.5 px-3 whitespace-nowrap text-gray-500">{l.hsn_code ?? "-"}</td>
+                      <td className="py-1.5 px-3 text-right whitespace-nowrap">{l.received_qty} {l.unit ?? ""}</td>
+                      <td className="py-1.5 px-3 text-right whitespace-nowrap">Rs.{l.unit_price}</td>
+                      <td className="py-1.5 px-3 text-right whitespace-nowrap text-gray-500">
+                        {l.cgst_pct != null || l.sgst_pct != null ? `${l.cgst_pct ?? 0}+${l.sgst_pct ?? 0}` : "-"}
+                      </td>
+                      <td className="py-1.5 pl-3 text-right whitespace-nowrap">Rs.{l.received_amount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-3 space-y-1 border-t border-dashed border-gray-200 pt-3 text-sm">
+              <div className="flex justify-between text-gray-500">
+                <span>Subtotal</span>
+                <span>Rs.{subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-gray-500">
+                <span>CGST</span>
+                <span>Rs.{totalCgst.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-gray-500">
+                <span>SGST</span>
+                <span>Rs.{totalSgst.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-gray-500">
+                <span>Total GST</span>
+                <span>Rs.{totalGst.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between font-semibold text-gray-900">
+                <span>Bill total</span>
+                <span>Rs.{billTotal.toFixed(2)}</span>
+              </div>
+            </div>
           </div>
 
           <WhatsAppSendCard

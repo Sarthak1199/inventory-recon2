@@ -7,6 +7,9 @@ export interface OcrLine {
   qty: number;
   unit_price: number;
   amount: number;
+  hsn_code: string | null;
+  cgst_pct: number | null;
+  sgst_pct: number | null;
 }
 
 export interface OcrResult {
@@ -23,12 +26,14 @@ Return ONLY valid JSON, no prose, matching exactly this shape:
   "invoice_date": string | null,   // ISO format YYYY-MM-DD, null if unreadable
   "vendor_name": string | null,
   "lines": [
-    { "item_name": string, "qty": number, "unit_price": number, "amount": number }
+    { "item_name": string, "qty": number, "unit_price": number, "amount": number, "hsn_code": string | null, "cgst_pct": number | null, "sgst_pct": number | null }
   ]
 }
 Rules:
 - If a field is illegible or absent, use null (or omit the line if a whole row is unreadable).
 - amount should equal qty * unit_price when both are present; if the printed amount differs, prefer the printed amount.
+- hsn_code is the HSN/SAC code printed for that line item, if any.
+- cgst_pct and sgst_pct are the CGST and SGST tax rates (as plain numbers, e.g. 2.5 for 2.5%) that apply to that line item. If the invoice only shows a single blended GST rate per item (not split into CGST/SGST), divide it evenly between cgst_pct and sgst_pct. If tax rates are shown only as a bill-level summary rather than per line, apply that same rate to every line it covers. Use null if no tax rate is determinable for a line.
 - Do not invent line items. Do not include tax/subtotal/total rows in "lines".
 - Numbers must be plain numbers (no currency symbols or commas).`;
 

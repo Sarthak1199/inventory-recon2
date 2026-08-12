@@ -116,11 +116,21 @@ CREATE TABLE IF NOT EXISTS grns (
   file_url        TEXT NOT NULL,
   ocr_status      TEXT NOT NULL DEFAULT 'pending' CHECK (ocr_status IN ('pending','parsed','needs_review','confirmed')),
   raw_ocr_json    JSONB,
+  subtotal_amount NUMERIC(14,2),
+  total_cgst      NUMERIC(14,2),
+  total_sgst      NUMERIC(14,2),
+  total_gst       NUMERIC(14,2),
+  bill_total      NUMERIC(14,2),
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_grn_account_branch ON grns(account_id, branch_id);
 CREATE INDEX IF NOT EXISTS idx_grn_po ON grns(po_id);
 ALTER TABLE grns ADD COLUMN IF NOT EXISTS grn_number TEXT;
+ALTER TABLE grns ADD COLUMN IF NOT EXISTS subtotal_amount NUMERIC(14,2);
+ALTER TABLE grns ADD COLUMN IF NOT EXISTS total_cgst NUMERIC(14,2);
+ALTER TABLE grns ADD COLUMN IF NOT EXISTS total_sgst NUMERIC(14,2);
+ALTER TABLE grns ADD COLUMN IF NOT EXISTS total_gst NUMERIC(14,2);
+ALTER TABLE grns ADD COLUMN IF NOT EXISTS bill_total NUMERIC(14,2);
 
 CREATE TABLE IF NOT EXISTS grn_lines (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -132,9 +142,19 @@ CREATE TABLE IF NOT EXISTS grn_lines (
   received_amount   NUMERIC(14,2) NOT NULL,
   is_off_po         BOOLEAN NOT NULL DEFAULT FALSE,
   match_type        TEXT NOT NULL DEFAULT 'none' CHECK (match_type IN ('exact','fuzzy','manual','none')),
-  raw_item_name     TEXT
+  raw_item_name     TEXT,
+  hsn_code          TEXT,
+  cgst_pct          NUMERIC(5,2),
+  sgst_pct          NUMERIC(5,2),
+  cgst_amount       NUMERIC(14,2),
+  sgst_amount       NUMERIC(14,2)
 );
 CREATE INDEX IF NOT EXISTS idx_grn_line_grn_item ON grn_lines(grn_id, item_id);
+ALTER TABLE grn_lines ADD COLUMN IF NOT EXISTS hsn_code TEXT;
+ALTER TABLE grn_lines ADD COLUMN IF NOT EXISTS cgst_pct NUMERIC(5,2);
+ALTER TABLE grn_lines ADD COLUMN IF NOT EXISTS sgst_pct NUMERIC(5,2);
+ALTER TABLE grn_lines ADD COLUMN IF NOT EXISTS cgst_amount NUMERIC(14,2);
+ALTER TABLE grn_lines ADD COLUMN IF NOT EXISTS sgst_amount NUMERIC(14,2);
 
 CREATE TABLE IF NOT EXISTS po_comparisons (
   po_id                UUID PRIMARY KEY REFERENCES purchase_orders(id) ON DELETE CASCADE,

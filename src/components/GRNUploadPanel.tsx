@@ -29,10 +29,17 @@ interface ExtractedLine {
   qty: number;
   unitPrice: number;
   amount: number;
+  hsnCode: string | null;
+  cgstPct: number | null;
+  sgstPct: number | null;
   matchedItemId: string | null;
   matchedItemName: string | null;
   matchType: "exact" | "fuzzy" | "none";
   resolvedItemId?: string;
+}
+
+function fmtRs(v: number) {
+  return `Rs.${v.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 }
 
 export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
@@ -118,7 +125,10 @@ export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSa
   }
 
   function addBlankLine() {
-    setReviewLines((prev) => [...prev, { itemName: "", qty: 0, unitPrice: 0, amount: 0, matchedItemId: null, matchedItemName: null, matchType: "none" }]);
+    setReviewLines((prev) => [
+      ...prev,
+      { itemName: "", qty: 0, unitPrice: 0, amount: 0, hsnCode: null, cgstPct: null, sgstPct: null, matchedItemId: null, matchedItemName: null, matchType: "none" },
+    ]);
   }
 
   function removeLine(index: number) {
@@ -142,6 +152,9 @@ export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSa
           unitPrice: l.unitPrice,
           itemId: l.resolvedItemId || l.matchedItemId,
           matchType: l.resolvedItemId ? "manual" : l.matchType,
+          hsnCode: l.hsnCode || null,
+          cgstPct: l.cgstPct,
+          sgstPct: l.sgstPct,
         })),
       });
       showToast("GRN saved.");
@@ -274,12 +287,16 @@ export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSa
                 <h3 className="text-sm font-medium text-gray-900">Line items</h3>
                 <button onClick={addBlankLine} className="text-xs text-brand">+ Add line</button>
               </div>
-              <table className="w-full text-xs">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-xs">
                 <thead>
                   <tr className="text-left uppercase text-gray-400">
                     <th className="py-1">Name (as printed)</th>
+                    <th className="py-1">HSN</th>
                     <th className="py-1">Qty</th>
                     <th className="py-1">Price</th>
+                    <th className="py-1">CGST%</th>
+                    <th className="py-1">SGST%</th>
                     <th className="py-1">Matched item</th>
                     <th className="py-1"></th>
                   </tr>
@@ -288,13 +305,32 @@ export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSa
                   {reviewLines.map((line, i) => (
                     <tr key={i} className="border-t border-gray-50">
                       <td className="py-1">
-                        <input value={line.itemName} onChange={(e) => updateLine(i, { itemName: e.target.value })} className="w-28 rounded border border-gray-200 px-1 py-0.5" />
+                        <input value={line.itemName} onChange={(e) => updateLine(i, { itemName: e.target.value })} className="w-24 rounded border border-gray-200 px-1 py-0.5" />
                       </td>
                       <td className="py-1">
-                        <input type="number" value={line.qty} onChange={(e) => updateLine(i, { qty: Number(e.target.value) })} className="w-16 rounded border border-gray-200 px-1 py-0.5" />
+                        <input value={line.hsnCode ?? ""} onChange={(e) => updateLine(i, { hsnCode: e.target.value || null })} className="w-16 rounded border border-gray-200 px-1 py-0.5" />
                       </td>
                       <td className="py-1">
-                        <input type="number" value={line.unitPrice} onChange={(e) => updateLine(i, { unitPrice: Number(e.target.value) })} className="w-16 rounded border border-gray-200 px-1 py-0.5" />
+                        <input type="number" value={line.qty} onChange={(e) => updateLine(i, { qty: Number(e.target.value) })} className="w-14 rounded border border-gray-200 px-1 py-0.5" />
+                      </td>
+                      <td className="py-1">
+                        <input type="number" value={line.unitPrice} onChange={(e) => updateLine(i, { unitPrice: Number(e.target.value) })} className="w-14 rounded border border-gray-200 px-1 py-0.5" />
+                      </td>
+                      <td className="py-1">
+                        <input
+                          type="number"
+                          value={line.cgstPct ?? ""}
+                          onChange={(e) => updateLine(i, { cgstPct: e.target.value === "" ? null : Number(e.target.value) })}
+                          className="w-12 rounded border border-gray-200 px-1 py-0.5"
+                        />
+                      </td>
+                      <td className="py-1">
+                        <input
+                          type="number"
+                          value={line.sgstPct ?? ""}
+                          onChange={(e) => updateLine(i, { sgstPct: e.target.value === "" ? null : Number(e.target.value) })}
+                          className="w-12 rounded border border-gray-200 px-1 py-0.5"
+                        />
                       </td>
                       <td className="py-1">
                         <select
@@ -318,7 +354,27 @@ export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSa
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
+
+            {(() => {
+              const subtotal = reviewLines.reduce((s, l) => s + l.qty * l.unitPrice, 0);
+              const totalCgst = reviewLines.reduce((s, l) => s + (l.qty * l.unitPrice * (l.cgstPct ?? 0)) / 100, 0);
+              const totalSgst = reviewLines.reduce((s, l) => s + (l.qty * l.unitPrice * (l.sgstPct ?? 0)) / 100, 0);
+              const totalGst = totalCgst + totalSgst;
+              const billTotal = subtotal + totalGst;
+              return (
+                <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm">
+                  <div className="grid grid-cols-2 gap-y-1 text-gray-600 sm:grid-cols-5">
+                    <div>Subtotal: <span className="font-medium text-gray-900">{fmtRs(subtotal)}</span></div>
+                    <div>CGST: <span className="font-medium text-gray-900">{fmtRs(totalCgst)}</span></div>
+                    <div>SGST: <span className="font-medium text-gray-900">{fmtRs(totalSgst)}</span></div>
+                    <div>Total GST: <span className="font-medium text-gray-900">{fmtRs(totalGst)}</span></div>
+                    <div>Bill total: <span className="font-semibold text-gray-900">{fmtRs(billTotal)}</span></div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button onClick={handleConfirm} disabled={saving} className="w-full rounded-md bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60">

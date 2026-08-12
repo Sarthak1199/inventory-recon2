@@ -86,6 +86,9 @@ grnsRouter.post("/upload", requireAuth, uploadGrn.single("file"), async (req: Au
       qty: l.qty,
       unitPrice: l.unit_price,
       amount: l.amount,
+      hsnCode: l.hsn_code ?? null,
+      cgstPct: l.cgst_pct ?? null,
+      sgstPct: l.sgst_pct ?? null,
       matchedItemId: match.item?.id ?? null,
       matchedItemName: match.item?.name ?? null,
       matchType: match.matchType,
@@ -238,6 +241,10 @@ grnsRouter.put("/:id/review", requireAuth, async (req: AuthedRequest, res) => {
       poLinesByItem = new Map(poLinesRes.rows.map((r: any) => [r.item_id, { id: r.id }]));
     }
 
+    let subtotal = 0;
+    let totalCgst = 0;
+    let totalSgst = 0;
+
     for (const l of lines) {
       const qty = Number(l.qty);
       const unitPrice = Number(l.unitPrice);
@@ -247,12 +254,29 @@ grnsRouter.put("/:id/review", requireAuth, async (req: AuthedRequest, res) => {
       const poLine = itemId ? poLinesByItem.get(itemId) : undefined;
       const isOffPo = !poLine;
 
+      const hsnCode = l.hsnCode ?? null;
+      const cgstPct = l.cgstPct != null ? Number(l.cgstPct) : null;
+      const sgstPct = l.sgstPct != null ? Number(l.sgstPct) : null;
+      const cgstAmount = cgstPct != null ? amount * (cgstPct / 100) : null;
+      const sgstAmount = sgstPct != null ? amount * (sgstPct / 100) : null;
+
+      subtotal += amount;
+      totalCgst += cgstAmount ?? 0;
+      totalSgst += sgstAmount ?? 0;
+
       await client.query(
-        `INSERT INTO grn_lines (grn_id, item_id, po_line_id, received_qty, unit_price, received_amount, is_off_po, match_type, raw_item_name)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [req.params.id, itemId, poLine?.id ?? null, qty, unitPrice, amount, isOffPo, matchType, l.itemName ?? null]
+        `INSERT INTO grn_lines (grn_id, item_id, po_line_id, received_qty, unit_price, received_amount, is_off_po, match_type, raw_item_name, hsn_code, cgst_pct, sgst_pct, cgst_amount, sgst_amount)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+        [req.params.id, itemId, poLine?.id ?? null, qty, unitPrice, amount, isOffPo, matchType, l.itemName ?? null, hsnCode, cgstPct, sgstPct, cgstAmount, sgstAmount]
       );
     }
+
+    const totalGst = totalCgst + totalSgst;
+    const billTotal = subtotal + totalGst;
+    await client.query(
+      `UPDATE grns SET subtotal_amount = $2, total_cgst = $3, total_sgst = $4, total_gst = $5, bill_total = $6 WHERE id = $1`,
+      [req.params.id, subtotal, totalCgst, totalSgst, totalGst, billTotal]
+    );
 
     await client.query("COMMIT");
   } catch (err) {
