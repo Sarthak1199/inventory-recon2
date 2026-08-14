@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { api } from "../lib/api";
+import { useToast } from "../context/ToastContext";
 import { WhatsAppSendCard } from "../components/WhatsAppSendCard";
 
 interface Line {
@@ -47,11 +48,27 @@ const STATUS_STYLES: Record<string, string> = {
 
 export function PODetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { showToast } = useToast();
   const [po, setPo] = useState<PODetailData | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     api.get(`/purchase-orders/${id}`).then((res) => setPo(res.data));
   }, [id]);
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await api.delete(`/purchase-orders/${id}`);
+      showToast("Purchase order deleted.");
+      navigate("/purchase-orders");
+    } catch {
+      showToast("Failed to delete purchase order.", "error");
+      setDeleting(false);
+    }
+  }
 
   if (!po) {
     return (
@@ -70,9 +87,38 @@ export function PODetail() {
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Purchase Order</p>
               <h1 className="text-2xl font-bold text-gray-900">{po.po_number}</h1>
             </div>
-            <span className={`rounded-full px-3 py-1 text-xs font-medium ${STATUS_STYLES[po.status] ?? ""}`}>
-              {po.status.replace("_", " ")}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`rounded-full px-3 py-1 text-xs font-medium ${STATUS_STYLES[po.status] ?? ""}`}>
+                {po.status.replace("_", " ")}
+              </span>
+              <Link
+                to={`/purchase-orders/${id}/edit`}
+                className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Edit
+              </Link>
+              {confirmDelete ? (
+                <span className="flex items-center gap-1.5">
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+                  >
+                    {deleting ? "Deleting..." : "Confirm delete"}
+                  </button>
+                  <button onClick={() => setConfirmDelete(false)} className="text-xs text-gray-400 hover:text-gray-600">
+                    Cancel
+                  </button>
+                </span>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                >
+                  Delete
+                </button>
+              )}
+            </div>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-y-2 text-sm">
             <div>

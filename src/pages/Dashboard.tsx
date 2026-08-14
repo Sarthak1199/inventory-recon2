@@ -20,6 +20,7 @@ import { useToast } from "../context/ToastContext";
 import { DateRangeFilter, type DateRange } from "../components/DateRangeFilter";
 import { SkeletonCard, SkeletonTable } from "../components/Skeleton";
 import { AddBranchModal } from "../components/AddBranchModal";
+import { MultiSelectFilter } from "../components/MultiSelectFilter";
 
 interface Kpis {
   onTime: { pct: number | null; breakdown: { early: number; on_time: number; late: number }; count: number };
@@ -126,8 +127,8 @@ export function Dashboard() {
   const { branches, refresh } = useAuth();
   const { showToast } = useToast();
   const [showAddBranch, setShowAddBranch] = useState(false);
-  const [branchFilter, setBranchFilter] = useState("all");
-  const [vendorFilter, setVendorFilter] = useState("");
+  const [branchFilter, setBranchFilter] = useState<string[]>([]);
+  const [vendorFilter, setVendorFilter] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<DateRange>({ from: "", to: "" });
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [kpis, setKpis] = useState<Kpis | null>(null);
@@ -143,8 +144,8 @@ export function Dashboard() {
   }, []);
 
   useEffect(() => {
-    const params: Record<string, string> = { branchId: branchFilter };
-    if (vendorFilter) params.vendorId = vendorFilter;
+    const params: Record<string, string> = { branchId: branchFilter.length ? branchFilter.join(",") : "all" };
+    if (vendorFilter.length) params.vendorId = vendorFilter.join(",");
     if (dateRange.from) params.dateFrom = dateRange.from;
     if (dateRange.to) params.dateTo = dateRange.to;
 
@@ -191,7 +192,7 @@ export function Dashboard() {
           onClose={() => setShowAddBranch(false)}
           onCreated={async (b) => {
             await refresh();
-            setBranchFilter(b.id);
+            setBranchFilter([b.id]);
             showToast(`Branch "${b.name}" added.`);
           }}
         />
@@ -200,30 +201,18 @@ export function Dashboard() {
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <select
-            value={branchFilter}
-            onChange={(e) => setBranchFilter(e.target.value)}
-            className="filter-select rounded-md border border-gray-300 py-1.5 pl-3 text-sm"
-          >
-            <option value="all">All branches</option>
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={vendorFilter}
-            onChange={(e) => setVendorFilter(e.target.value)}
-            className="filter-select rounded-md border border-gray-300 py-1.5 pl-3 text-sm"
-          >
-            <option value="">All vendors</option>
-            {vendors.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.name}
-              </option>
-            ))}
-          </select>
+          <MultiSelectFilter
+            label="Branches"
+            options={branches.map((b) => ({ id: b.id, label: b.name }))}
+            selected={branchFilter}
+            onChange={setBranchFilter}
+          />
+          <MultiSelectFilter
+            label="Vendors"
+            options={vendors.map((v) => ({ id: v.id, label: v.name }))}
+            selected={vendorFilter}
+            onChange={setVendorFilter}
+          />
           <DateRangeFilter value={dateRange} onChange={setDateRange} />
           <button
             onClick={() => setShowAddBranch(true)}

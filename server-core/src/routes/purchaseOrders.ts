@@ -6,6 +6,7 @@ import { uploadCsv } from "../middleware/upload.js";
 import { getAccountItems, matchItemName } from "../services/matching.js";
 import { generatePoNumber } from "../lib/poNumber.js";
 import { buildPoWhatsAppMessage, buildWaLink } from "../services/waTemplates.js";
+import { recomputePoComparison } from "../services/gapEngine.js";
 
 export const purchaseOrdersRouter = Router();
 
@@ -148,6 +149,86 @@ purchaseOrdersRouter.post("/", requireAuth, async (req: AuthedRequest, res) => {
   } finally {
     client.release();
   }
+});
+
+purchaseOrdersRouter.put("/:id", requireAuth, async (req: AuthedRequest, res) => {
+  const { vendorId, expectedDeliveryDate, lines } = req.body ?? {};
+  if (!vendorId || !Array.isArray(lines) || lines.length === 0) {
+    return res.status(400).json({ error: "vendorId and at least one line are required" });
+  }
+
+  const poCheck = await pool.query(`SELECT id FROM purchase_orders WHERE id = $1 AND account_id = $2`, [req.params.id, req.user!.accountId]);
+  if (poCheck.rowCount === 0) return res.status(404).json({ error: "PO not found" });
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    let total = 0;
+    const lineRows: { itemId: string; qty: number; price: number; amount: number }[] = [];
+    for (const l of lines) {
+      const qty = Number(l.orderedQty);
+      const price = Number(l.unitPrice);
+      const amount = qty * price;
+      total += amount;
+      lineRows.push({ itemId: l.itemId, qty, price, amount });
+    }
+
+    await client.query(
+      `UPDATE purchase_orders SET vendor_id = $2, expected_delivery_date = $3, total_amount = $4 WHERE id = $1`,
+      [req.params.id, vendorId, expectedDeliveryDate ?? null, total]
+    );
+
+    // Any GRN lines already matched to this PO's line rows must be detached before the old lines are replaced,
+    // since grn_lines.po_line_id has no ON DELETE clause (RESTRICT).
+    await client.query(
+      `UPDATE grn_lines SET po_line_id = NULL, is_off_po = true WHERE po_line_id IN (SELECT id FROM po_lines WHERE po_id = $1)`,
+      [req.params.id]
+    );
+    await client.query(`DELETE FROM po_lines WHERE po_id = $1`, [req.params.id]);
+
+    for (const l of lineRows) {
+      await client.query(
+        `INSERT INTO po_lines (po_id, item_id, ordered_qty, unit_price, ordered_amount) VALUES ($1, $2, $3, $4, $5)`,
+        [req.params.id, l.itemId, l.qty, l.price, l.amount]
+      );
+    }
+
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  await recomputePoComparison(req.params.id as string);
+
+  res.json({ ok: true });
+});
+
+purchaseOrdersRouter.delete("/:id", requireAuth, async (req: AuthedRequest, res) => {
+  const poCheck = await pool.query(`SELECT id FROM purchase_orders WHERE id = $1 AND account_id = $2`, [req.params.id, req.user!.accountId]);
+  if (poCheck.rowCount === 0) return res.status(404).json({ error: "PO not found" });
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      `UPDATE grn_lines SET po_line_id = NULL, is_off_po = true WHERE po_line_id IN (SELECT id FROM po_lines WHERE po_id = $1)`,
+      [req.params.id]
+    );
+    await client.query(`UPDATE grns SET po_id = NULL WHERE po_id = $1`, [req.params.id]);
+    await client.query(`DELETE FROM purchase_orders WHERE id = $1`, [req.params.id]);
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  res.status(204).end();
 });
 
 async function buildPoWaPreview(accountId: string, poId: string) {

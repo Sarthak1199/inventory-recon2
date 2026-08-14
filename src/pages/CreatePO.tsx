@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
@@ -48,6 +48,8 @@ function downloadSampleCsv() {
 }
 
 export function CreatePO() {
+  const { id } = useParams();
+  const isEdit = !!id;
   const { activeBranchId, branches } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -60,6 +62,7 @@ export function CreatePO() {
   const [lines, setLines] = useState<Line[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingExisting, setLoadingExisting] = useState(isEdit);
 
   const [itemSearch, setItemSearch] = useState("");
   const [manualItemId, setManualItemId] = useState("");
@@ -79,6 +82,29 @@ export function CreatePO() {
   useEffect(() => {
     if (!branchId && activeBranchId) setBranchId(activeBranchId);
   }, [activeBranchId, branchId]);
+
+  useEffect(() => {
+    if (!isEdit) return;
+    api
+      .get(`/purchase-orders/${id}`)
+      .then((res) => {
+        const po = res.data;
+        setBranchId(po.branch_id);
+        setVendorId(po.vendor_id);
+        setExpectedDeliveryDate(po.expected_delivery_date?.slice(0, 10) ?? "");
+        setLines(
+          po.lines.map((l: any) => ({
+            itemId: l.item_id,
+            itemName: l.item_name,
+            unit: l.unit,
+            orderedQty: Number(l.ordered_qty),
+            unitPrice: Number(l.unit_price),
+          }))
+        );
+      })
+      .finally(() => setLoadingExisting(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, isEdit]);
 
   const filteredItems = useMemo(
     () => items.filter((i) => i.name.toLowerCase().includes(itemSearch.toLowerCase())),
@@ -141,20 +167,39 @@ export function CreatePO() {
 
     setSubmitting(true);
     try {
-      const res = await api.post("/purchase-orders", {
-        branchId,
-        vendorId,
-        expectedDeliveryDate: expectedDeliveryDate || null,
-        lines: lines.map((l) => ({ itemId: l.itemId, orderedQty: l.orderedQty, unitPrice: l.unitPrice })),
-      });
-      showToast(`Purchase order ${res.data.po_number ?? ""} created.`);
-      navigate(`/purchase-orders/${res.data.id}`);
+      const linePayload = lines.map((l) => ({ itemId: l.itemId, orderedQty: l.orderedQty, unitPrice: l.unitPrice }));
+      if (isEdit) {
+        await api.put(`/purchase-orders/${id}`, {
+          vendorId,
+          expectedDeliveryDate: expectedDeliveryDate || null,
+          lines: linePayload,
+        });
+        showToast("Purchase order updated.");
+        navigate(`/purchase-orders/${id}`);
+      } else {
+        const res = await api.post("/purchase-orders", {
+          branchId,
+          vendorId,
+          expectedDeliveryDate: expectedDeliveryDate || null,
+          lines: linePayload,
+        });
+        showToast(`Purchase order ${res.data.po_number ?? ""} created.`);
+        navigate(`/purchase-orders/${res.data.id}`);
+      }
     } catch (err: any) {
-      setError(err?.response?.data?.error ?? "Failed to create PO");
-      showToast("Failed to create purchase order.", "error");
+      setError(err?.response?.data?.error ?? `Failed to ${isEdit ? "update" : "create"} PO`);
+      showToast(`Failed to ${isEdit ? "update" : "create"} purchase order.`, "error");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (loadingExisting) {
+    return (
+      <div className="mx-auto max-w-3xl">
+        <div className="h-96 animate-pulse rounded-lg bg-gray-100" />
+      </div>
+    );
   }
 
   return (
@@ -168,12 +213,17 @@ export function CreatePO() {
           }}
         />
       )}
-      <h1 className="text-xl font-semibold text-gray-900">Create Purchase Order</h1>
+      <h1 className="text-xl font-semibold text-gray-900">{isEdit ? "Edit Purchase Order" : "Create Purchase Order"}</h1>
 
       <div className="grid grid-cols-1 gap-4 rounded-lg border border-gray-200 bg-white p-6 sm:grid-cols-2">
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Branch</label>
-          <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+          <select
+            value={branchId}
+            onChange={(e) => setBranchId(e.target.value)}
+            disabled={isEdit}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-50 disabled:text-gray-500"
+          >
             <option value="">Select branch</option>
             {branches.map((b) => (
               <option key={b.id} value={b.id}>{b.name}</option>
@@ -333,7 +383,7 @@ export function CreatePO() {
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       <button onClick={handleSubmit} disabled={submitting} className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
-        {submitting ? "Saving..." : "Save Purchase Order"}
+        {submitting ? "Saving..." : isEdit ? "Save Changes" : "Save Purchase Order"}
       </button>
     </div>
   );

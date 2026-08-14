@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { api } from "../lib/api";
+import { useToast } from "../context/ToastContext";
 import { WhatsAppSendCard } from "../components/WhatsAppSendCard";
+import { GRNUploadPanel } from "../components/GRNUploadPanel";
 
 interface GrnLine {
   id: string;
@@ -51,13 +53,34 @@ const STATUS_STYLES: Record<string, string> = {
 
 export function GRNDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { showToast } = useToast();
   const [grn, setGrn] = useState<GrnDetailData | null>(null);
   const [imageFailed, setImageFailed] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  function loadGrn() {
+    api.get(`/grns/${id}`).then((res) => setGrn(res.data));
+  }
 
   useEffect(() => {
     setImageFailed(false);
-    api.get(`/grns/${id}`).then((res) => setGrn(res.data));
+    loadGrn();
   }, [id]);
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await api.delete(`/grns/${id}`);
+      showToast("GRN deleted.");
+      navigate("/grns");
+    } catch {
+      showToast("Failed to delete GRN.", "error");
+      setDeleting(false);
+    }
+  }
 
   if (!grn) {
     return (
@@ -75,6 +98,14 @@ export function GRNDetail() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
+      {showEdit && (
+        <GRNUploadPanel
+          editGrnId={grn.id}
+          onClose={() => setShowEdit(false)}
+          onSaved={loadGrn}
+        />
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">{grn.grn_number ?? grn.invoice_number ?? "GRN"}</h1>
@@ -85,9 +116,38 @@ export function GRNDetail() {
             {grn.po_number ? ` · Linked to ${grn.po_number}` : " · Off-PO"}
           </p>
         </div>
-        <span className={`rounded-full px-3 py-1 text-xs font-medium ${STATUS_STYLES[grn.ocr_status] ?? ""}`}>
-          {grn.ocr_status.replace("_", " ")}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`rounded-full px-3 py-1 text-xs font-medium ${STATUS_STYLES[grn.ocr_status] ?? ""}`}>
+            {grn.ocr_status.replace("_", " ")}
+          </span>
+          <button
+            onClick={() => setShowEdit(true)}
+            className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Edit
+          </button>
+          {confirmDelete ? (
+            <span className="flex items-center gap-1.5">
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+              >
+                {deleting ? "Deleting..." : "Confirm delete"}
+              </button>
+              <button onClick={() => setConfirmDelete(false)} className="text-xs text-gray-400 hover:text-gray-600">
+                Cancel
+              </button>
+            </span>
+          ) : (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+            >
+              Delete
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

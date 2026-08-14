@@ -30,12 +30,14 @@ export function WhatsAppSendCard({
 
   useEffect(() => {
     if (initialPreview !== undefined) {
+      setPreview(initialPreview ?? null);
       setLoadingPreview(false);
       return;
     }
+    setLoadingPreview(true);
     api.get(previewUrl).then((res) => setPreview(res.data)).finally(() => setLoadingPreview(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [previewUrl]);
+  }, [previewUrl, initialPreview]);
 
   async function handleSend() {
     setSending(true);

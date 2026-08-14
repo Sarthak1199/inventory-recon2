@@ -5,19 +5,29 @@ import { getPriceTolerancePct, priceFlag } from "../services/gapEngine.js";
 
 export const dashboardRouter = Router();
 
+function parseMultiId(val: unknown): string[] {
+  if (val == null) return [];
+  const raw = Array.isArray(val) ? val : String(val).split(",");
+  return raw.map((v) => String(v).trim()).filter((v) => v && v !== "all");
+}
+
 function buildFilters(req: AuthedRequest, alias: string) {
   const { branchId, vendorId, dateFrom, dateTo } = req.query;
   const conditions: string[] = [`${alias}.account_id = $1`];
   const params: unknown[] = [req.user!.accountId];
 
-  const effectiveBranch = branchId && branchId !== "all" ? branchId : !branchId ? req.activeBranchId : null;
-  if (effectiveBranch) {
-    params.push(effectiveBranch);
+  const branchIds = parseMultiId(branchId);
+  if (branchIds.length > 0) {
+    params.push(branchIds);
+    conditions.push(`${alias}.branch_id = ANY($${params.length})`);
+  } else if (!branchId && req.activeBranchId) {
+    params.push(req.activeBranchId);
     conditions.push(`${alias}.branch_id = $${params.length}`);
   }
-  if (vendorId) {
-    params.push(vendorId);
-    conditions.push(`${alias}.vendor_id = $${params.length}`);
+  const vendorIds = parseMultiId(vendorId);
+  if (vendorIds.length > 0) {
+    params.push(vendorIds);
+    conditions.push(`${alias}.vendor_id = ANY($${params.length})`);
   }
   if (dateFrom) {
     params.push(dateFrom);

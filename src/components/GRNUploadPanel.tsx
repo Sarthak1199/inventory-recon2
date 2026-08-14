@@ -42,16 +42,26 @@ function fmtRs(v: number) {
   return `Rs.${v.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 }
 
-export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+export function GRNUploadPanel({
+  onClose,
+  onSaved,
+  editGrnId,
+}: {
+  onClose: () => void;
+  onSaved: () => void;
+  editGrnId?: string;
+}) {
   const { activeBranchId, branches } = useAuth();
   const { showToast } = useToast();
 
   const [branchId, setBranchId] = useState(activeBranchId ?? "");
+  const [poBranchId, setPoBranchId] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [openPos, setOpenPos] = useState<OpenPo[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [loadingExisting, setLoadingExisting] = useState(!!editGrnId);
 
   const [grnId, setGrnId] = useState<string | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
@@ -70,11 +80,45 @@ export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSa
   }, [activeBranchId, branchId]);
 
   useEffect(() => {
-    if (!branchId) return;
-    api.get("/purchase-orders", { params: { branchId } }).then((res) =>
+    if (!editGrnId) return;
+    api
+      .get(`/grns/${editGrnId}`)
+      .then((res) => {
+        const g = res.data;
+        setGrnId(g.id);
+        setFileUrl(g.file_url);
+        setInvoiceNumber(g.invoice_number ?? "");
+        setInvoiceDate(g.invoice_date?.slice(0, 10) ?? "");
+        setReceivedDate(g.received_date?.slice(0, 10) ?? "");
+        setVendorId(g.vendor_id ?? "");
+        setPoId(g.po_id ?? "");
+        setPoBranchId(g.branch_id ?? "");
+        setReviewLines(
+          g.lines.map((l: any) => ({
+            itemName: l.item_name ?? l.raw_item_name ?? "",
+            qty: Number(l.received_qty),
+            unitPrice: Number(l.unit_price),
+            amount: Number(l.received_amount),
+            hsnCode: l.hsn_code ?? null,
+            cgstPct: l.cgst_pct != null ? Number(l.cgst_pct) : null,
+            sgstPct: l.sgst_pct != null ? Number(l.sgst_pct) : null,
+            matchedItemId: l.item_id ?? null,
+            matchedItemName: l.item_name ?? null,
+            matchType: l.match_type ?? "none",
+          }))
+        );
+      })
+      .finally(() => setLoadingExisting(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editGrnId]);
+
+  useEffect(() => {
+    const effectiveBranchId = editGrnId ? poBranchId : branchId;
+    if (!effectiveBranchId) return;
+    api.get("/purchase-orders", { params: { branchId: effectiveBranchId } }).then((res) =>
       setOpenPos(res.data.filter((p: any) => p.status === "sent" || p.status === "partially_received"))
     );
-  }, [branchId]);
+  }, [branchId, poBranchId, editGrnId]);
 
   useEffect(() => {
     api.get("/vendors").then((res) => setVendors(res.data));
@@ -157,7 +201,7 @@ export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSa
           sgstPct: l.sgstPct,
         })),
       });
-      showToast("GRN saved.");
+      showToast(editGrnId ? "GRN updated." : "GRN saved.");
       onSaved();
       onClose();
     } catch (err: any) {
@@ -182,7 +226,7 @@ export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSa
         )}
 
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-          <h1 className="text-lg font-semibold text-gray-900">Upload GRN / Invoice</h1>
+          <h1 className="text-lg font-semibold text-gray-900">{editGrnId ? "Edit GRN / Invoice" : "Upload GRN / Invoice"}</h1>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -190,7 +234,11 @@ export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSa
           </button>
         </div>
 
-        {!grnId ? (
+        {loadingExisting ? (
+          <div className="flex-1 p-6">
+            <div className="h-64 animate-pulse rounded-lg bg-gray-100" />
+          </div>
+        ) : !grnId ? (
           <div className="flex-1 space-y-4 p-6">
             {uploading ? (
               <div className="flex flex-col items-center justify-center gap-3 rounded-md border-2 border-dashed border-brand/40 bg-brand/5 px-4 py-16 text-center">
@@ -378,7 +426,7 @@ export function GRNUploadPanel({ onClose, onSaved }: { onClose: () => void; onSa
 
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button onClick={handleConfirm} disabled={saving} className="w-full rounded-md bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
-              {saving ? "Saving..." : "Confirm GRN"}
+              {saving ? "Saving..." : editGrnId ? "Save Changes" : "Confirm GRN"}
             </button>
           </div>
         )}

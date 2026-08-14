@@ -28,6 +28,7 @@ function App() {
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/purchase-orders" element={<POList />} />
         <Route path="/purchase-orders/new" element={<CreatePO />} />
+        <Route path="/purchase-orders/:id/edit" element={<CreatePO />} />
         <Route path="/purchase-orders/:id" element={<PODetail />} />
         <Route path="/grns" element={<GRNList />} />
         <Route path="/grns/:id" element={<GRNDetail />} />

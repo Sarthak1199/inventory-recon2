@@ -171,6 +171,20 @@ grnsRouter.get("/:id", requireAuth, async (req: AuthedRequest, res) => {
   res.json({ ...grnRes.rows[0], lines: linesRes.rows, waPreview });
 });
 
+grnsRouter.delete("/:id", requireAuth, async (req: AuthedRequest, res) => {
+  const grnRes = await pool.query(`SELECT po_id FROM grns WHERE id = $1 AND account_id = $2`, [req.params.id, req.user!.accountId]);
+  if (grnRes.rowCount === 0) return res.status(404).json({ error: "GRN not found" });
+  const poId = grnRes.rows[0].po_id;
+
+  await pool.query(`DELETE FROM grns WHERE id = $1`, [req.params.id]);
+
+  if (poId) {
+    await recomputePoComparison(poId);
+  }
+
+  res.status(204).end();
+});
+
 async function buildGrnWaPreview(accountId: string, grnId: string) {
   const grnRes = await pool.query(
     `SELECT g.invoice_number, g.received_date, po.po_number, v.name AS vendor_name, v.whatsapp_number, b.name AS branch_name
