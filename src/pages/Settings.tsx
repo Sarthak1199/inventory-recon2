@@ -53,9 +53,11 @@ export function Settings() {
 
   const [branches, setBranches] = useState<Branch[]>([]);
   const [showAddBranch, setShowAddBranch] = useState(false);
+  const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [showAddVendor, setShowAddVendor] = useState(false);
+  const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [itemForm, setItemForm] = useState({ name: "", unit: "", category: "" });
   const [itemError, setItemError] = useState<string | null>(null);
   const [vendorCsv, setVendorCsv] = useState<File | null>(null);
@@ -106,6 +108,17 @@ export function Settings() {
     await api.delete(`/vendors/${id}`);
     loadVendors();
     showToast("Vendor removed.");
+  }
+
+  async function deleteBranch(id: string) {
+    try {
+      await api.delete(`/branches/${id}`);
+      loadBranches();
+      await refresh();
+      showToast("Branch removed.");
+    } catch (err: any) {
+      showToast(err?.response?.data?.error ?? "Failed to remove branch.", "error");
+    }
   }
 
   async function savePhoneNumber(id: string) {
@@ -179,6 +192,17 @@ export function Settings() {
         />
       )}
 
+      {editingVendor && (
+        <AddVendorModal
+          vendor={editingVendor}
+          onClose={() => setEditingVendor(null)}
+          onCreated={() => {
+            loadVendors();
+            showToast("Vendor updated.");
+          }}
+        />
+      )}
+
       {showAddBranch && (
         <AddBranchModal
           onClose={() => setShowAddBranch(false)}
@@ -186,6 +210,18 @@ export function Settings() {
             loadBranches();
             await refresh();
             showToast(`Branch "${b.name}" added.`);
+          }}
+        />
+      )}
+
+      {editingBranch && (
+        <AddBranchModal
+          branch={editingBranch}
+          onClose={() => setEditingBranch(null)}
+          onCreated={async () => {
+            loadBranches();
+            await refresh();
+            showToast("Branch updated.");
           }}
         />
       )}
@@ -267,6 +303,14 @@ export function Settings() {
                   <span className="ml-2 text-gray-400">{b.code}</span>
                   {b.manager_name && <span className="ml-2 text-gray-400">Manager: {b.manager_name}{b.manager_phone ? ` (${b.manager_phone})` : ""}</span>}
                 </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <button onClick={() => setEditingBranch(b)} className="text-xs text-brand hover:underline">
+                    Edit
+                  </button>
+                  <button onClick={() => deleteBranch(b.id)} className="text-xs text-red-500 hover:text-red-700">
+                    Remove
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -346,9 +390,14 @@ export function Settings() {
                   )
                 )}
               </div>
-              <button onClick={() => deleteVendor(v.id)} className="shrink-0 text-xs text-red-500 hover:text-red-700">
-                Remove
-              </button>
+              <div className="flex shrink-0 items-center gap-3">
+                <button onClick={() => setEditingVendor(v)} className="text-xs text-brand hover:underline">
+                  Edit
+                </button>
+                <button onClick={() => deleteVendor(v.id)} className="text-xs text-red-500 hover:text-red-700">
+                  Remove
+                </button>
+              </div>
             </div>
           ))}
         </div>
