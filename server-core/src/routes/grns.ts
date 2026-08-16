@@ -231,20 +231,26 @@ grnsRouter.post("/:id/share-wa", requireAuth, async (req: AuthedRequest, res) =>
 });
 
 grnsRouter.put("/:id/review", requireAuth, async (req: AuthedRequest, res) => {
-  const { invoiceNumber, invoiceDate, receivedDate, poId, vendorId, lines } = req.body ?? {};
+  const { invoiceNumber, invoiceDate, receivedDate, poId, vendorId, branchId, lines } = req.body ?? {};
   if (!Array.isArray(lines)) return res.status(400).json({ error: "lines array is required" });
 
   const grnCheck = await pool.query(`SELECT id FROM grns WHERE id = $1 AND account_id = $2`, [req.params.id, req.user!.accountId]);
   if (grnCheck.rowCount === 0) return res.status(404).json({ error: "GRN not found" });
+
+  if (branchId) {
+    const branchCheck = await pool.query(`SELECT id FROM branches WHERE id = $1 AND account_id = $2`, [branchId, req.user!.accountId]);
+    if (branchCheck.rowCount === 0) return res.status(400).json({ error: "Branch not found" });
+  }
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
     await client.query(
-      `UPDATE grns SET invoice_number = $2, invoice_date = $3, received_date = $4, po_id = $5, vendor_id = $6, ocr_status = 'confirmed'
+      `UPDATE grns SET invoice_number = $2, invoice_date = $3, received_date = $4, po_id = $5, vendor_id = $6,
+              branch_id = COALESCE($7, branch_id), ocr_status = 'confirmed'
        WHERE id = $1`,
-      [req.params.id, invoiceNumber ?? null, invoiceDate ?? null, receivedDate ?? null, poId ?? null, vendorId ?? null]
+      [req.params.id, invoiceNumber ?? null, invoiceDate ?? null, receivedDate ?? null, poId ?? null, vendorId ?? null, branchId ?? null]
     );
 
     await client.query(`DELETE FROM grn_lines WHERE grn_id = $1`, [req.params.id]);

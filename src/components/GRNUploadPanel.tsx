@@ -55,7 +55,6 @@ export function GRNUploadPanel({
   const { showToast } = useToast();
 
   const [branchId, setBranchId] = useState(activeBranchId ?? "");
-  const [poBranchId, setPoBranchId] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [openPos, setOpenPos] = useState<OpenPo[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -92,7 +91,7 @@ export function GRNUploadPanel({
         setReceivedDate(g.received_date?.slice(0, 10) ?? "");
         setVendorId(g.vendor_id ?? "");
         setPoId(g.po_id ?? "");
-        setPoBranchId(g.branch_id ?? "");
+        setBranchId(g.branch_id ?? "");
         setReviewLines(
           g.lines.map((l: any) => ({
             itemName: l.item_name ?? l.raw_item_name ?? "",
@@ -113,12 +112,11 @@ export function GRNUploadPanel({
   }, [editGrnId]);
 
   useEffect(() => {
-    const effectiveBranchId = editGrnId ? poBranchId : branchId;
-    if (!effectiveBranchId) return;
-    api.get("/purchase-orders", { params: { branchId: effectiveBranchId } }).then((res) =>
+    if (!branchId) return;
+    api.get("/purchase-orders", { params: { branchId } }).then((res) =>
       setOpenPos(res.data.filter((p: any) => p.status === "sent" || p.status === "partially_received"))
     );
-  }, [branchId, poBranchId, editGrnId]);
+  }, [branchId]);
 
   useEffect(() => {
     api.get("/vendors").then((res) => setVendors(res.data));
@@ -181,6 +179,10 @@ export function GRNUploadPanel({
 
   async function handleConfirm() {
     if (!grnId) return;
+    if (!branchId) {
+      setError("Select a branch.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -190,6 +192,7 @@ export function GRNUploadPanel({
         receivedDate: receivedDate || null,
         poId: poId || null,
         vendorId: vendorId || null,
+        branchId: branchId || null,
         lines: reviewLines.map((l) => ({
           itemName: l.itemName,
           qty: l.qty,
@@ -289,6 +292,22 @@ export function GRNUploadPanel({
             </div>
 
             <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className="mb-1 block text-xs font-medium text-gray-700">Branch</label>
+                <select
+                  value={branchId}
+                  onChange={(e) => {
+                    setBranchId(e.target.value);
+                    setPoId("");
+                  }}
+                  className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                >
+                  <option value="">Select branch</option>
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Invoice number</label>
                 <input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm" />
