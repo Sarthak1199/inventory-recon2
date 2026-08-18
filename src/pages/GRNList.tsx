@@ -65,20 +65,26 @@ export function GRNList() {
       {showUpload && <GRNUploadPanel onClose={() => setShowUpload(false)} onSaved={load} />}
 
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">GRNs / Invoices</h1>
-        <button onClick={() => setShowUpload(true)} className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white">
-          + Upload GRN
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">GRNs / Invoices</h1>
+          <p className="mt-1 text-sm text-gray-500">Reconcile what arrived against what was ordered.</p>
+        </div>
+        <button onClick={() => setShowUpload(true)} className="inline-flex items-center gap-2 rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Upload GRN
         </button>
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="filter-select rounded-md border border-gray-300 py-1.5 pl-3 text-sm">
+        <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="filter-select rounded-lg border border-gray-200 py-1.5 pl-3 text-sm">
           <option value="all">All branches</option>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>{b.name}</option>
           ))}
         </select>
-        <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="filter-select rounded-md border border-gray-300 py-1.5 pl-3 text-sm">
+        <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="filter-select rounded-lg border border-gray-200 py-1.5 pl-3 text-sm">
           <option value="">All vendors</option>
           {vendors.map((v) => (
             <option key={v.id} value={v.id}>{v.name}</option>
@@ -90,7 +96,7 @@ export function GRNList() {
       {loading ? (
         <SkeletonTable rows={5} cols={7} />
       ) : (
-        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 text-left text-xs uppercase text-gray-400">

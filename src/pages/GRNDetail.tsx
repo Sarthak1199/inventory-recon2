@@ -108,7 +108,7 @@ export function GRNDetail() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">{grn.grn_number ?? grn.invoice_number ?? "GRN"}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{grn.grn_number ?? grn.invoice_number ?? "GRN"}</h1>
           <p className="text-sm text-gray-500">
             {grn.invoice_number ? `Invoice ${grn.invoice_number} · ` : ""}
             {grn.branch_name}
@@ -122,7 +122,7 @@ export function GRNDetail() {
           </span>
           <button
             onClick={() => setShowEdit(true)}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
           >
             Edit
           </button>
@@ -131,7 +131,7 @@ export function GRNDetail() {
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
               >
                 {deleting ? "Deleting..." : "Confirm delete"}
               </button>
@@ -142,7 +142,7 @@ export function GRNDetail() {
           ) : (
             <button
               onClick={() => setConfirmDelete(true)}
-              className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+              className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
             >
               Delete
             </button>
@@ -151,10 +151,10 @@ export function GRNDetail() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4">
           <h2 className="mb-2 font-medium text-gray-900">Source document</h2>
           {imageFailed ? (
-            <div className="flex h-64 w-full items-center justify-center rounded-md border border-gray-100 bg-gray-50 text-sm text-gray-400">
+            <div className="flex h-64 w-full items-center justify-center rounded-lg border border-gray-100 bg-gray-50 text-sm text-gray-400">
               Source document unavailable.
             </div>
           ) : grn.file_url.endsWith(".pdf") ? (
@@ -163,14 +163,14 @@ export function GRNDetail() {
             <img
               src={grn.file_url}
               alt="GRN source"
-              className="w-full rounded-md border border-gray-100"
+              className="w-full rounded-lg border border-gray-100"
               onError={() => setImageFailed(true)}
             />
           )}
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-4 text-sm">
             <dl className="grid grid-cols-2 gap-y-2">
               <dt className="text-gray-500">Invoice date</dt>
               <dd className="text-gray-900">{grn.invoice_date?.slice(0, 10) ?? "N/A"}</dd>
@@ -179,7 +179,7 @@ export function GRNDetail() {
             </dl>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <div className="rounded-2xl border border-gray-100 bg-white p-4">
             <h2 className="mb-2 font-medium text-gray-900">Line items</h2>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[520px] text-sm">

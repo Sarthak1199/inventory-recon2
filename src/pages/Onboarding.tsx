@@ -75,16 +75,16 @@ export function Onboarding() {
         <p className="text-sm text-gray-500">Branding, items, and vendors. You can always add more later from Settings.</p>
       </div>
 
-      {status && <div className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">{status}</div>}
+      {status && <div className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{status}</div>}
 
-      <form onSubmit={saveBrand} className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="font-medium text-gray-900">Branding</h2>
+      <form onSubmit={saveBrand} className="space-y-4 rounded-2xl border border-gray-100 bg-white p-6">
+        <h2 className="text-base font-semibold text-gray-900">Branding</h2>
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Brand name</label>
           <input
             value={brandName}
             onChange={(e) => setBrandName(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
           />
         </div>
         <div className="flex items-center gap-3">
@@ -99,17 +99,17 @@ export function Onboarding() {
         <button
           type="submit"
           disabled={savingBrand}
-          className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+          className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
         >
           {savingBrand ? "Saving..." : "Save branding"}
         </button>
       </form>
 
-      <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="font-medium text-gray-900">Items (optional)</h2>
+      <div className="space-y-4 rounded-2xl border border-gray-100 bg-white p-6">
+        <h2 className="text-base font-semibold text-gray-900">Items (optional)</h2>
         <div className="flex items-center gap-2">
           <input type="file" accept=".csv" onChange={(e) => setItemCsv(e.target.files?.[0] ?? null)} className="text-sm" />
-          <button onClick={uploadItemCsv} disabled={!itemCsv} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50">
+          <button onClick={uploadItemCsv} disabled={!itemCsv} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm disabled:opacity-50">
             Upload CSV
           </button>
         </div>
@@ -119,31 +119,31 @@ export function Onboarding() {
             placeholder="Item name"
             value={itemManual.name}
             onChange={(e) => setItemManual((f) => ({ ...f, name: e.target.value }))}
-            className="flex-1 min-w-32 rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+            className="flex-1 min-w-32 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           />
           <input
             placeholder="Unit (kg, litre...)"
             value={itemManual.unit}
             onChange={(e) => setItemManual((f) => ({ ...f, unit: e.target.value }))}
-            className="w-36 rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+            className="w-36 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           />
           <input
             placeholder="Category"
             value={itemManual.category}
             onChange={(e) => setItemManual((f) => ({ ...f, category: e.target.value }))}
-            className="w-36 rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+            className="w-36 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           />
-          <button type="submit" className="rounded-md bg-gray-900 px-3 py-1.5 text-sm text-white">
+          <button type="submit" className="rounded-lg bg-gray-900 px-3 py-1.5 text-sm text-white">
             Add
           </button>
         </form>
       </div>
 
-      <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="font-medium text-gray-900">Vendors (optional)</h2>
+      <div className="space-y-4 rounded-2xl border border-gray-100 bg-white p-6">
+        <h2 className="text-base font-semibold text-gray-900">Vendors (optional)</h2>
         <div className="flex items-center gap-2">
           <input type="file" accept=".csv" onChange={(e) => setVendorCsv(e.target.files?.[0] ?? null)} className="text-sm" />
-          <button onClick={uploadVendorCsv} disabled={!vendorCsv} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50">
+          <button onClick={uploadVendorCsv} disabled={!vendorCsv} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm disabled:opacity-50">
             Upload CSV
           </button>
         </div>
@@ -153,27 +153,27 @@ export function Onboarding() {
             placeholder="Vendor name"
             value={vendorManual.name}
             onChange={(e) => setVendorManual((f) => ({ ...f, name: e.target.value }))}
-            className="flex-1 min-w-32 rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+            className="flex-1 min-w-32 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           />
           <input
             placeholder="WhatsApp number"
             value={vendorManual.whatsapp_number}
             onChange={(e) => setVendorManual((f) => ({ ...f, whatsapp_number: e.target.value }))}
-            className="w-40 rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+            className="w-40 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           />
           <input
             placeholder="GSTIN (optional)"
             value={vendorManual.gstin}
             onChange={(e) => setVendorManual((f) => ({ ...f, gstin: e.target.value }))}
-            className="w-40 rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+            className="w-40 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           />
-          <button type="submit" className="rounded-md bg-gray-900 px-3 py-1.5 text-sm text-white">
+          <button type="submit" className="rounded-lg bg-gray-900 px-3 py-1.5 text-sm text-white">
             Add
           </button>
         </form>
       </div>
 
-      <button onClick={() => navigate("/")} className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white">
+      <button onClick={() => navigate("/")} className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-white">
         Go to dashboard
       </button>
     </div>

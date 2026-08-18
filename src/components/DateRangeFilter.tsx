@@ -53,7 +53,7 @@ export function DateRangeFilter({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white py-1.5 pl-3 pr-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
       >
         <svg className="h-4 w-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -65,7 +65,7 @@ export function DateRangeFilter({
       </button>
 
       {open && (
-        <div className="absolute left-0 z-20 mt-2 w-72 rounded-lg border border-gray-200 bg-white p-3 shadow-lg">
+        <div className="absolute left-0 z-20 mt-2 w-72 rounded-2xl border border-gray-100 bg-white p-3 shadow-lg">
           <div className="mb-3 grid grid-cols-2 gap-1.5">
             {PRESETS.map((p) => (
               <button
@@ -75,7 +75,7 @@ export function DateRangeFilter({
                   onChange(r);
                   setOpen(false);
                 }}
-                className="rounded-md border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-brand hover:text-brand"
+                className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-brand hover:text-brand"
               >
                 {p.label}
               </button>
@@ -88,7 +88,7 @@ export function DateRangeFilter({
                 type="date"
                 value={draft.from}
                 onChange={(e) => setDraft((d) => ({ ...d, from: e.target.value }))}
-                className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm"
+                className="flex-1 rounded-lg border border-gray-200 px-2 py-1 text-sm"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -97,7 +97,7 @@ export function DateRangeFilter({
                 type="date"
                 value={draft.to}
                 onChange={(e) => setDraft((d) => ({ ...d, to: e.target.value }))}
-                className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm"
+                className="flex-1 rounded-lg border border-gray-200 px-2 py-1 text-sm"
               />
             </div>
             <button
@@ -105,7 +105,7 @@ export function DateRangeFilter({
                 onChange(draft);
                 setOpen(false);
               }}
-              className="w-full rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white"
+              className="w-full rounded-full bg-brand px-3 py-1.5 text-sm font-medium text-white"
             >
               Apply
             </button>

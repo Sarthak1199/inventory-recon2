@@ -68,27 +68,27 @@ export function AddVendorModal({
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">WhatsApp number</label>
-              <input value={whatsapp ?? ""} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+91..." className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+              <input value={whatsapp ?? ""} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+91..." className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">GSTIN</label>
-              <input value={gstin ?? ""} onChange={(e) => setGstin(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+              <input value={gstin ?? ""} onChange={(e) => setGstin(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">POC name</label>
-              <input value={pocName ?? ""} onChange={(e) => setPocName(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+              <input value={pocName ?? ""} onChange={(e) => setPocName(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">POC number</label>
-              <input value={pocNumber ?? ""} onChange={(e) => setPocNumber(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+              <input value={pocNumber ?? ""} onChange={(e) => setPocNumber(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
             </div>
           </div>
           <div>
@@ -98,18 +98,18 @@ export function AddVendorModal({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What does this vendor supply?"
               rows={2}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
             />
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700">
+            <button type="button" onClick={onClose} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700">
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+              className="rounded-full bg-brand px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
             >
               {saving ? "Saving..." : isEdit ? "Save changes" : "Add vendor"}
             </button>

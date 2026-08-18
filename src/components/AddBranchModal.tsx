@@ -69,7 +69,7 @@ export function AddBranchModal({
                 autoFocus
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
               />
             </div>
             <div>
@@ -78,7 +78,7 @@ export function AddBranchModal({
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="e.g. KOR"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
               />
             </div>
           </div>
@@ -88,7 +88,7 @@ export function AddBranchModal({
               <input
                 value={managerName ?? ""}
                 onChange={(e) => setManagerName(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
               />
             </div>
             <div>
@@ -97,19 +97,19 @@ export function AddBranchModal({
                 value={managerPhone ?? ""}
                 onChange={(e) => setManagerPhone(e.target.value)}
                 placeholder="+91..."
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
               />
             </div>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700">
+            <button type="button" onClick={onClose} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700">
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+              className="rounded-full bg-brand px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
             >
               {saving ? "Saving..." : isEdit ? "Save changes" : "Add branch"}
             </button>

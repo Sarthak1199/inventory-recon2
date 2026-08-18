@@ -213,16 +213,16 @@ export function CreatePO() {
           }}
         />
       )}
-      <h1 className="text-xl font-semibold text-gray-900">{isEdit ? "Edit Purchase Order" : "Create Purchase Order"}</h1>
+      <h1 className="text-2xl font-bold text-gray-900">{isEdit ? "Edit Purchase Order" : "Create Purchase Order"}</h1>
 
-      <div className="grid grid-cols-1 gap-4 rounded-lg border border-gray-200 bg-white p-6 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 rounded-2xl border border-gray-100 bg-white p-6 sm:grid-cols-2">
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Branch</label>
           <select
             value={branchId}
             onChange={(e) => setBranchId(e.target.value)}
             disabled={isEdit}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-50 disabled:text-gray-500"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm disabled:bg-gray-50 disabled:text-gray-500"
           >
             <option value="">Select branch</option>
             {branches.map((b) => (
@@ -233,7 +233,7 @@ export function CreatePO() {
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Vendor</label>
           <div className="flex gap-2">
-            <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+            <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
               <option value="">Select vendor</option>
               {vendors.map((v) => (
                 <option key={v.id} value={v.id}>{v.name}</option>
@@ -242,7 +242,7 @@ export function CreatePO() {
             <button
               type="button"
               onClick={() => setShowAddVendor(true)}
-              className="shrink-0 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="shrink-0 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               + New
             </button>
@@ -254,29 +254,29 @@ export function CreatePO() {
             type="date"
             value={expectedDeliveryDate}
             onChange={(e) => setExpectedDeliveryDate(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
           />
         </div>
       </div>
 
-      <div className="space-y-3 rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="font-medium text-gray-900">Add line items</h2>
+      <div className="space-y-3 rounded-2xl border border-gray-100 bg-white p-6">
+        <h2 className="text-base font-semibold text-gray-900">Add line items</h2>
         <input
           placeholder="Search item..."
           value={itemSearch}
           onChange={(e) => setItemSearch(e.target.value)}
-          className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+          className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
         />
         <div className="flex flex-wrap gap-2">
-          <select value={manualItemId} onChange={(e) => setManualItemId(e.target.value)} className="flex-1 min-w-40 rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+          <select value={manualItemId} onChange={(e) => setManualItemId(e.target.value)} className="flex-1 min-w-40 rounded-lg border border-gray-200 px-3 py-1.5 text-sm">
             <option value="">Select item</option>
             {filteredItems.map((i) => (
               <option key={i.id} value={i.id}>{itemLabel(i)}</option>
             ))}
           </select>
-          <input placeholder="Qty" type="number" value={manualQty} onChange={(e) => setManualQty(e.target.value)} className="w-24 rounded-md border border-gray-300 px-3 py-1.5 text-sm" />
-          <input placeholder="Unit price" type="number" value={manualPrice} onChange={(e) => setManualPrice(e.target.value)} className="w-32 rounded-md border border-gray-300 px-3 py-1.5 text-sm" />
-          <button onClick={addManualLine} className="rounded-md bg-gray-900 px-3 py-1.5 text-sm text-white">Add</button>
+          <input placeholder="Qty" type="number" value={manualQty} onChange={(e) => setManualQty(e.target.value)} className="w-24 rounded-lg border border-gray-200 px-3 py-1.5 text-sm" />
+          <input placeholder="Unit price" type="number" value={manualPrice} onChange={(e) => setManualPrice(e.target.value)} className="w-32 rounded-lg border border-gray-200 px-3 py-1.5 text-sm" />
+          <button onClick={addManualLine} className="rounded-lg bg-gray-900 px-3 py-1.5 text-sm text-white">Add</button>
         </div>
 
         <button
@@ -288,14 +288,14 @@ export function CreatePO() {
         </button>
 
         {showCsvUpload && (
-          <div className="space-y-3 rounded-md border border-gray-100 bg-gray-50 p-4">
+          <div className="space-y-3 rounded-lg border border-gray-100 bg-gray-50 p-4">
             <div className="flex items-center justify-between">
               <p className="text-xs text-gray-500">Columns: item_name, qty, unit_price</p>
               <button onClick={downloadSampleCsv} className="text-xs text-brand hover:underline">Download sample CSV</button>
             </div>
             <div className="flex items-center gap-2">
               <input type="file" accept=".csv" onChange={(e) => setCsvFile(e.target.files?.[0] ?? null)} className="text-sm" />
-              <button onClick={previewCsv} disabled={!csvFile} className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm disabled:opacity-50">
+              <button onClick={previewCsv} disabled={!csvFile} className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm disabled:opacity-50">
                 Preview
               </button>
             </div>
@@ -326,7 +326,7 @@ export function CreatePO() {
                             <select
                               value={row.resolvedItemId ?? ""}
                               onChange={(e) => setCsvRowResolution(row.rowIndex, e.target.value)}
-                              className="rounded-md border border-gray-300 px-2 py-1 text-xs"
+                              className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
                             >
                               <option value="">Map to item...</option>
                               {items.map((i) => (
@@ -339,7 +339,7 @@ export function CreatePO() {
                     ))}
                   </tbody>
                 </table>
-                <button onClick={addCsvRowsToLines} className="rounded-md bg-gray-900 px-3 py-1.5 text-sm text-white">
+                <button onClick={addCsvRowsToLines} className="rounded-lg bg-gray-900 px-3 py-1.5 text-sm text-white">
                   Add resolved rows to PO
                 </button>
               </div>
@@ -348,7 +348,7 @@ export function CreatePO() {
         )}
       </div>
 
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
+      <div className="rounded-2xl border border-gray-100 bg-white p-6">
         <h2 className="mb-3 font-medium text-gray-900">Line items ({lines.length})</h2>
         {lines.length === 0 ? (
           <p className="text-sm text-gray-400">No lines added yet.</p>
@@ -382,7 +382,7 @@ export function CreatePO() {
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <button onClick={handleSubmit} disabled={submitting} className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+      <button onClick={handleSubmit} disabled={submitting} className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
         {submitting ? "Saving..." : isEdit ? "Save Changes" : "Save Purchase Order"}
       </button>
     </div>

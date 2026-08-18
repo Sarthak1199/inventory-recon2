@@ -39,10 +39,6 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-function applyBrandColor(hex: string | undefined | null) {
-  document.documentElement.style.setProperty("--brand", hex || "#4f46e5");
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
@@ -59,7 +55,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const active = localStorage.getItem("activeBranchId") || res.data.activeBranchId;
       setActiveBranchId(active);
       if (active) localStorage.setItem("activeBranchId", active);
-      applyBrandColor(res.data.account?.brand_hex_color);
     } catch {
       setUser(null);
       setAccount(null);

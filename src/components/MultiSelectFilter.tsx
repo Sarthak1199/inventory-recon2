@@ -43,7 +43,7 @@ export function MultiSelectFilter({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white py-1.5 pl-3 pr-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
       >
         <span className="whitespace-nowrap">{buttonText}</span>
         <svg className="h-3 w-3 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,11 +52,11 @@ export function MultiSelectFilter({
       </button>
 
       {open && (
-        <div className="absolute left-0 z-20 mt-2 w-60 rounded-lg border border-gray-200 bg-white p-2 shadow-lg">
+        <div className="absolute left-0 z-20 mt-2 w-60 rounded-2xl border border-gray-100 bg-white p-2 shadow-lg">
           <div className="max-h-64 overflow-y-auto">
             {options.length === 0 && <p className="px-2 py-2 text-xs text-gray-400">No options.</p>}
             {options.map((o) => (
-              <label key={o.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-gray-50">
+              <label key={o.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-gray-50">
                 <input
                   type="checkbox"
                   checked={selected.includes(o.id)}
@@ -71,7 +71,7 @@ export function MultiSelectFilter({
             <button
               type="button"
               onClick={() => onChange([])}
-              className="mt-1 w-full rounded-md border-t border-gray-100 px-2 pt-2 text-left text-xs text-brand hover:underline"
+              className="mt-1 w-full rounded-lg border-t border-gray-100 px-2 pt-2 text-left text-xs text-brand hover:underline"
             >
               Clear selection
             </button>

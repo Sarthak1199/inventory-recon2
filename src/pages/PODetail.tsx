@@ -80,7 +80,7 @@ export function PODetail() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="border-b border-dashed border-gray-200 px-8 py-6">
           <div className="flex items-start justify-between">
             <div>
@@ -93,7 +93,7 @@ export function PODetail() {
               </span>
               <Link
                 to={`/purchase-orders/${id}/edit`}
-                className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
               >
                 Edit
               </Link>
@@ -102,7 +102,7 @@ export function PODetail() {
                   <button
                     onClick={handleDelete}
                     disabled={deleting}
-                    className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+                    className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
                   >
                     {deleting ? "Deleting..." : "Confirm delete"}
                   </button>
@@ -113,7 +113,7 @@ export function PODetail() {
               ) : (
                 <button
                   onClick={() => setConfirmDelete(true)}
-                  className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                  className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
                 >
                   Delete
                 </button>

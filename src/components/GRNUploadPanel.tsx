@@ -228,7 +228,7 @@ export function GRNUploadPanel({
           />
         )}
 
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <h1 className="text-lg font-semibold text-gray-900">{editGrnId ? "Edit GRN / Invoice" : "Upload GRN / Invoice"}</h1>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -244,7 +244,7 @@ export function GRNUploadPanel({
         ) : !grnId ? (
           <div className="flex-1 space-y-4 p-6">
             {uploading ? (
-              <div className="flex flex-col items-center justify-center gap-3 rounded-md border-2 border-dashed border-brand/40 bg-brand/5 px-4 py-16 text-center">
+              <div className="flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-brand/40 bg-brand/5 px-4 py-16 text-center">
                 <svg className="h-8 w-8 animate-spin text-brand" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
@@ -256,7 +256,7 @@ export function GRNUploadPanel({
               <div className="space-y-4">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">Branch</label>
-                  <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+                  <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
                     <option value="">Select branch</option>
                     {branches.map((b) => (
                       <option key={b.id} value={b.id}>{b.name}</option>
@@ -264,7 +264,7 @@ export function GRNUploadPanel({
                   </select>
                 </div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">File (image or PDF)</label>
-                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border-2 border-dashed border-brand/40 bg-brand/5 px-4 py-10 text-sm font-medium text-brand transition hover:border-brand hover:bg-brand/10">
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-brand/40 bg-brand/5 px-4 py-10 text-sm font-medium text-brand transition hover:border-brand hover:bg-brand/10">
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
@@ -276,7 +276,7 @@ export function GRNUploadPanel({
             )}
             {error && <p className="text-sm text-red-600">{error}</p>}
             {!uploading && (
-              <button onClick={handleUpload} disabled={!file || uploading} className="w-full rounded-md bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+              <button onClick={handleUpload} disabled={!file || uploading} className="w-full rounded-full bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
                 Upload & Extract
               </button>
             )}
@@ -287,7 +287,7 @@ export function GRNUploadPanel({
               {fileUrl?.endsWith(".pdf") ? (
                 <embed src={fileUrl} className="h-64 w-full" />
               ) : (
-                <img src={fileUrl ?? ""} alt="GRN source" className="max-h-64 w-full rounded-md border border-gray-100 object-contain" />
+                <img src={fileUrl ?? ""} alt="GRN source" className="max-h-64 w-full rounded-lg border border-gray-100 object-contain" />
               )}
             </div>
 
@@ -300,7 +300,7 @@ export function GRNUploadPanel({
                     setBranchId(e.target.value);
                     setPoId("");
                   }}
-                  className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                  className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm"
                 >
                   <option value="">Select branch</option>
                   {branches.map((b) => (
@@ -310,20 +310,20 @@ export function GRNUploadPanel({
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Invoice number</label>
-                <input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm" />
+                <input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Invoice date</label>
-                <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm" />
+                <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Received date</label>
-                <input type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm" />
+                <input type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Vendor</label>
                 <div className="flex gap-1">
-                  <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm">
+                  <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm">
                     <option value="">Select vendor</option>
                     {vendors.map((v) => (
                       <option key={v.id} value={v.id}>{v.name}</option>
@@ -332,7 +332,7 @@ export function GRNUploadPanel({
                   <button
                     type="button"
                     onClick={() => setShowAddVendor(true)}
-                    className="shrink-0 rounded-md border border-gray-300 px-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    className="shrink-0 rounded-lg border border-gray-200 px-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
                   >
                     + New
                   </button>
@@ -340,7 +340,7 @@ export function GRNUploadPanel({
               </div>
               <div className="col-span-2">
                 <label className="mb-1 block text-xs font-medium text-gray-700">Linked PO</label>
-                <select value={poId} onChange={(e) => setPoId(e.target.value)} className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm">
+                <select value={poId} onChange={(e) => setPoId(e.target.value)} className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm">
                   <option value="">No PO (off-PO items)</option>
                   {openPos.map((p) => (
                     <option key={p.id} value={p.id}>{p.po_number} ({p.vendor_name})</option>
@@ -444,7 +444,7 @@ export function GRNUploadPanel({
             })()}
 
             {error && <p className="text-sm text-red-600">{error}</p>}
-            <button onClick={handleConfirm} disabled={saving} className="w-full rounded-md bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+            <button onClick={handleConfirm} disabled={saving} className="w-full rounded-full bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
               {saving ? "Saving..." : editGrnId ? "Save Changes" : "Confirm GRN"}
             </button>
           </div>

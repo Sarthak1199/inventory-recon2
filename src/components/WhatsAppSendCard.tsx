@@ -54,12 +54,12 @@ export function WhatsAppSendCard({
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
+    <div className="rounded-2xl border border-gray-100 bg-white p-4">
       <h2 className="mb-2 font-medium text-gray-900">WhatsApp</h2>
       {loadingPreview ? (
-        <div className="h-24 animate-pulse rounded-md bg-gray-100" />
+        <div className="h-24 animate-pulse rounded-lg bg-gray-100" />
       ) : (
-        <pre className="mb-3 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-md bg-gray-50 p-3 text-xs text-gray-700">
+        <pre className="mb-3 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-xs text-gray-700">
           {preview?.message}
         </pre>
       )}
@@ -67,7 +67,7 @@ export function WhatsAppSendCard({
       <button
         onClick={handleSend}
         disabled={sending || loadingPreview}
-        className="flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+        className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
       >
         <WhatsAppIcon />
         {sending ? "Opening WhatsApp..." : actionLabel}
