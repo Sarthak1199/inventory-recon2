@@ -11,7 +11,15 @@ function parseMultiId(val: unknown): string[] {
   return raw.map((v) => String(v).trim()).filter((v) => v && v !== "all");
 }
 
-function buildFilters(req: AuthedRequest, alias: string) {
+/** GRN date used for filtering/grouping everywhere: the invoice date, falling back to received date, then upload date, so a GRN with the field blank is never silently dropped. */
+const GRN_DATE = "COALESCE(g.invoice_date, g.received_date, g.created_at::date)";
+
+/**
+ * dateExpr overrides what the dateFrom/dateTo range filters against - pass GRN_DATE
+ * (or an aliased equivalent, e.g. "pgd.grn_date") for anything that should be scoped
+ * by when the invoice was dated rather than by `${alias}.created_at`.
+ */
+function buildFilters(req: AuthedRequest, alias: string, dateExpr?: string) {
   const { branchId, vendorId, dateFrom, dateTo } = req.query;
   const conditions: string[] = [`${alias}.account_id = $1`];
   const params: unknown[] = [req.user!.accountId];
@@ -29,23 +37,32 @@ function buildFilters(req: AuthedRequest, alias: string) {
     params.push(vendorIds);
     conditions.push(`${alias}.vendor_id = ANY($${params.length})`);
   }
+  const dateCol = dateExpr ?? `${alias}.created_at`;
   if (dateFrom) {
     params.push(dateFrom);
-    conditions.push(`${alias}.created_at >= $${params.length}`);
+    conditions.push(`${dateCol} >= $${params.length}`);
   }
   if (dateTo) {
     params.push(dateTo);
-    conditions.push(`${alias}.created_at <= $${params.length}`);
+    conditions.push(`${dateCol} <= $${params.length}`);
   }
   return { where: conditions.join(" AND "), params };
 }
 
 dashboardRouter.get("/kpis", requireAuth, async (req: AuthedRequest, res) => {
-  const { where, params } = buildFilters(req, "po");
+  const { where, params } = buildFilters(req, "po", "pgd.grn_date");
 
   const comparisonRes = await pool.query(
-    `SELECT po.status, po.expected_delivery_date, pc.on_time_flag, pc.fill_flag
-     FROM purchase_orders po LEFT JOIN po_comparisons pc ON pc.po_id = po.id
+    `WITH po_grn_dates AS (
+       SELECT po_id, MIN(COALESCE(invoice_date, received_date, created_at::date)) AS grn_date
+       FROM grns
+       WHERE ocr_status = 'confirmed' AND po_id IS NOT NULL
+       GROUP BY po_id
+     )
+     SELECT po.status, po.expected_delivery_date, pc.on_time_flag, pc.fill_flag
+     FROM purchase_orders po
+     LEFT JOIN po_comparisons pc ON pc.po_id = po.id
+     LEFT JOIN po_grn_dates pgd ON pgd.po_id = po.id
      WHERE po.status != 'draft' AND ${where}`,
     params
   );
@@ -74,7 +91,7 @@ dashboardRouter.get("/kpis", requireAuth, async (req: AuthedRequest, res) => {
   const inFullPct = fillEligible > 0 ? (fillCounts.full / fillEligible) * 100 : null;
 
   const tolerance = await getPriceTolerancePct(req.user!.accountId);
-  const lineWhere = buildFilters(req, "po");
+  const lineWhere = buildFilters(req, "po", GRN_DATE);
   const lineRes = await pool.query(
     `SELECT pl.unit_price AS ordered_price, gl.unit_price AS received_price
      FROM grn_lines gl
@@ -115,7 +132,7 @@ dashboardRouter.get("/kpis", requireAuth, async (req: AuthedRequest, res) => {
 });
 
 dashboardRouter.get("/price-impact", requireAuth, async (req: AuthedRequest, res) => {
-  const { where, params } = buildFilters(req, "po");
+  const { where, params } = buildFilters(req, "po", GRN_DATE);
 
   const result = await pool.query(
     `SELECT i.id AS item_id, i.name AS item_name, i.unit,
@@ -147,7 +164,7 @@ dashboardRouter.get("/price-impact", requireAuth, async (req: AuthedRequest, res
     costImpact: Number(r.cost_impact),
   }));
 
-  const cogsWhere = buildFilters(req, "po");
+  const cogsWhere = buildFilters(req, "po", GRN_DATE);
   const cogsRes = await pool.query(
     `SELECT COALESCE(SUM(gl.received_amount), 0) AS total_cogs
      FROM grn_lines gl
@@ -165,11 +182,11 @@ dashboardRouter.get("/price-impact", requireAuth, async (req: AuthedRequest, res
 });
 
 dashboardRouter.get("/price-trend", requireAuth, async (req: AuthedRequest, res) => {
-  const { where, params } = buildFilters(req, "g");
+  const { where, params } = buildFilters(req, "g", GRN_DATE);
 
   const result = await pool.query(
     `SELECT i.id AS item_id, i.name AS item_name,
-            date_trunc('week', COALESCE(g.received_date, g.invoice_date, g.created_at::date))::date AS week,
+            date_trunc('week', ${GRN_DATE})::date AS week,
             AVG(gl.unit_price) AS avg_price
      FROM grn_lines gl
      JOIN grns g ON g.id = gl.grn_id
@@ -203,7 +220,7 @@ dashboardRouter.get("/price-trend", requireAuth, async (req: AuthedRequest, res)
 });
 
 dashboardRouter.get("/sku-counts", requireAuth, async (req: AuthedRequest, res) => {
-  const { where, params } = buildFilters(req, "g");
+  const { where, params } = buildFilters(req, "g", GRN_DATE);
 
   const result = await pool.query(
     `SELECT COALESCE(i.id::text, 'raw:' || lower(trim(gl.raw_item_name))) AS sku_key,

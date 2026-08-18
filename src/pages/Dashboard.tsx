@@ -95,6 +95,7 @@ function KpiPie({
   breakdown,
   tolerancePct,
   count,
+  countUnit = "invoice",
   icon,
 }: {
   title: string;
@@ -102,6 +103,7 @@ function KpiPie({
   breakdown: Record<string, number>;
   tolerancePct?: number;
   count: number;
+  countUnit?: string;
   icon: ReactNode;
 }) {
   const data = Object.entries(breakdown)
@@ -119,7 +121,7 @@ function KpiPie({
       </div>
       <p className="mt-3 text-sm text-gray-500">{title}</p>
       <p className="mt-1 text-3xl font-bold text-gray-900">{fmtPct(pct)}</p>
-      <p className="mt-0.5 text-xs text-gray-400">Based on {count} {count === 1 ? "invoice" : "invoices"}</p>
+      <p className="mt-0.5 text-xs text-gray-400">Based on {count} {count === 1 ? countUnit : `${countUnit}s`}</p>
       <div className="mt-2 h-40">
         {hasData ? (
           <ResponsiveContainer width="100%" height="100%">
@@ -269,6 +271,10 @@ export function Dashboard() {
         <DateRangeFilter value={dateRange} onChange={setDateRange} />
       </div>
 
+      <p className="text-xs text-gray-400">
+        On-Time Delivery, In-Full Delivery, and Price Accuracy compare PO-linked GRNs against what was ordered, so off-PO receipts aren't included here — see "Items received" below for those.
+      </p>
+
       {loading ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <SkeletonCard />
@@ -283,6 +289,7 @@ export function Dashboard() {
               pct={kpis.onTime.pct}
               breakdown={kpis.onTime.breakdown}
               count={kpis.onTime.count}
+              countUnit="purchase order"
               icon={
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-5 w-5">
                   <circle cx="12" cy="12" r="9" strokeLinecap="round" strokeLinejoin="round" />
@@ -295,6 +302,7 @@ export function Dashboard() {
               pct={kpis.inFull.pct}
               breakdown={kpis.inFull.breakdown}
               count={kpis.inFull.count}
+              countUnit="purchase order"
               icon={
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-5 w-5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M20 7L9 18l-5-5" />
@@ -307,6 +315,7 @@ export function Dashboard() {
               breakdown={kpis.priceAccuracy.breakdown}
               tolerancePct={kpis.priceAccuracy.tolerancePct}
               count={kpis.priceAccuracy.count}
+              countUnit="line item"
               icon={
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-5 w-5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18" />
