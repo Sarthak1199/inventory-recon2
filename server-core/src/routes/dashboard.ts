@@ -169,12 +169,12 @@ dashboardRouter.get("/price-trend", requireAuth, async (req: AuthedRequest, res)
 
   const result = await pool.query(
     `SELECT i.id AS item_id, i.name AS item_name,
-            date_trunc('week', g.received_date)::date AS week,
+            date_trunc('week', COALESCE(g.received_date, g.invoice_date, g.created_at::date))::date AS week,
             AVG(gl.unit_price) AS avg_price
      FROM grn_lines gl
      JOIN grns g ON g.id = gl.grn_id
      JOIN items i ON i.id = gl.item_id
-     WHERE g.ocr_status = 'confirmed' AND g.received_date IS NOT NULL AND ${where}
+     WHERE g.ocr_status = 'confirmed' AND ${where}
      GROUP BY i.id, i.name, week
      ORDER BY week ASC`,
     params
@@ -200,6 +200,42 @@ dashboardRouter.get("/price-trend", requireAuth, async (req: AuthedRequest, res)
   const itemNames = Array.from(byItem.values()).map((v) => v.itemName);
 
   res.json({ series, itemNames });
+});
+
+dashboardRouter.get("/sku-counts", requireAuth, async (req: AuthedRequest, res) => {
+  const { where, params } = buildFilters(req, "g");
+
+  const result = await pool.query(
+    `SELECT COALESCE(i.id::text, 'raw:' || lower(trim(gl.raw_item_name))) AS sku_key,
+            COALESCE(i.name, gl.raw_item_name, 'Unmatched item') AS item_name,
+            i.unit,
+            v.id AS vendor_id,
+            COALESCE(v.name, 'No vendor') AS vendor_name,
+            COUNT(*)::int AS occurrences,
+            SUM(gl.received_qty) AS total_qty
+     FROM grn_lines gl
+     JOIN grns g ON g.id = gl.grn_id
+     LEFT JOIN items i ON i.id = gl.item_id
+     LEFT JOIN vendors v ON v.id = g.vendor_id
+     WHERE g.ocr_status = 'confirmed' AND ${where}
+     GROUP BY sku_key, item_name, i.unit, v.id, v.name
+     ORDER BY total_qty DESC`,
+    params
+  );
+
+  const items = result.rows.map((r: any) => ({
+    skuKey: r.sku_key,
+    itemName: r.item_name,
+    unit: r.unit,
+    vendorId: r.vendor_id,
+    vendorName: r.vendor_name,
+    occurrences: r.occurrences,
+    totalQty: Number(r.total_qty),
+  }));
+
+  const uniqueSkuCount = new Set(items.map((r) => r.skuKey)).size;
+
+  res.json({ uniqueSkuCount, items });
 });
 
 dashboardRouter.get("/payables", requireAuth, async (req: AuthedRequest, res) => {

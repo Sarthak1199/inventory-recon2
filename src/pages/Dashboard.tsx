@@ -18,7 +18,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { DateRangeFilter, type DateRange } from "../components/DateRangeFilter";
-import { SkeletonCard, SkeletonTable } from "../components/Skeleton";
+import { Skeleton, SkeletonCard, SkeletonTable } from "../components/Skeleton";
 import { AddBranchModal } from "../components/AddBranchModal";
 import { MultiSelectFilter } from "../components/MultiSelectFilter";
 
@@ -66,6 +66,16 @@ interface PayableInvoice {
 interface Vendor {
   id: string;
   name: string;
+}
+
+interface SkuItem {
+  skuKey: string;
+  itemName: string;
+  unit: string | null;
+  vendorId: string | null;
+  vendorName: string;
+  occurrences: number;
+  totalQty: number;
 }
 
 function fmtPct(v: number | null) {
@@ -147,6 +157,11 @@ export function Dashboard() {
   const [totalSpend, setTotalSpend] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const [skuVendorFilter, setSkuVendorFilter] = useState("");
+  const [skuUniqueCount, setSkuUniqueCount] = useState(0);
+  const [skuItems, setSkuItems] = useState<SkuItem[]>([]);
+  const [skuLoading, setSkuLoading] = useState(true);
+
   useEffect(() => {
     api.get("/vendors").then((res) => setVendors(res.data));
   }, []);
@@ -174,6 +189,22 @@ export function Dashboard() {
       })
       .finally(() => setLoading(false));
   }, [branchFilter, vendorFilter, dateRange]);
+
+  useEffect(() => {
+    const params: Record<string, string> = { branchId: branchFilter.length ? branchFilter.join(",") : "all" };
+    if (skuVendorFilter) params.vendorId = skuVendorFilter;
+    if (dateRange.from) params.dateFrom = dateRange.from;
+    if (dateRange.to) params.dateTo = dateRange.to;
+
+    setSkuLoading(true);
+    api
+      .get("/dashboard/sku-counts", { params })
+      .then((res) => {
+        setSkuUniqueCount(res.data.uniqueSkuCount);
+        setSkuItems(res.data.items);
+      })
+      .finally(() => setSkuLoading(false));
+  }, [branchFilter, skuVendorFilter, dateRange]);
 
   function downloadPayablesCsv() {
     const header = "Vendor,PO Number,Created,Status,Item,Qty,Unit,Unit Price,Line Amount\n";
@@ -363,7 +394,7 @@ export function Dashboard() {
           <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
             <div>
               <h2 className="text-base font-semibold text-gray-900">Price Impact</h2>
-              <p className="text-xs text-gray-500">Ordered vs received price, sorted by highest cost impact</p>
+              <p className="text-xs text-gray-500">Ordered vs received price for PO-linked items only, sorted by highest cost impact. See "Items received" below for off-PO items.</p>
             </div>
             {priceImpact && <p className="text-sm font-semibold text-gray-900">Total COGS: {fmtRs(priceImpact.totalCogs)}</p>}
           </div>
@@ -404,6 +435,64 @@ export function Dashboard() {
           </table>
         </div>
       )}
+
+      <div className="rounded-2xl border border-gray-100 bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-3">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Items received</h2>
+            <p className="text-xs text-gray-500">Unique SKUs received per vendor for this period, including off-PO items</p>
+          </div>
+          <select
+            value={skuVendorFilter}
+            onChange={(e) => setSkuVendorFilter(e.target.value)}
+            className="filter-select rounded-lg border border-gray-200 py-1.5 pl-3 text-sm"
+          >
+            <option value="">All vendors</option>
+            {vendors.map((v) => (
+              <option key={v.id} value={v.id}>{v.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {skuLoading ? (
+          <div className="p-5">
+            <Skeleton className="h-72 w-full" />
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-8 px-5 py-4">
+              <div>
+                <p className="text-sm text-gray-500">Unique SKUs</p>
+                <p className="mt-1 text-3xl font-bold text-gray-900">{skuUniqueCount}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Receiving line entries</p>
+                <p className="mt-1 text-3xl font-bold text-gray-900">
+                  {skuItems.reduce((s, i) => s + i.occurrences, 0)}
+                </p>
+              </div>
+            </div>
+            <div className="h-80 p-4">
+              {skuItems.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={skuItems.slice(0, 15).map((i) => ({
+                    ...i,
+                    label: skuVendorFilter ? i.itemName : `${i.itemName} (${i.vendorName})`,
+                  }))} layout="vertical" margin={{ left: 24 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+                    <YAxis type="category" dataKey="label" tick={{ fontSize: 12 }} width={180} />
+                    <Tooltip formatter={(v: number, _name, item: any) => [`${v} ${item.payload.unit ?? ""}`.trim(), "Qty received"]} />
+                    <Bar dataKey="totalQty" fill="#4f46e5" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-gray-400">No confirmed GRN data yet for this filter.</div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
