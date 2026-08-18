@@ -154,8 +154,15 @@ export function GRNDetail() {
         <div className="rounded-2xl border border-gray-100 bg-white p-4">
           <h2 className="mb-2 font-medium text-gray-900">Source document</h2>
           {imageFailed ? (
-            <div className="flex h-64 w-full items-center justify-center rounded-lg border border-gray-100 bg-gray-50 text-sm text-gray-400">
-              Source document unavailable.
+            <div className="flex h-64 w-full flex-col items-center justify-center gap-1 rounded-lg border border-gray-100 bg-gray-50 px-6 text-center text-sm text-gray-400">
+              {grn.file_url.startsWith("/uploads/") ? (
+                <>
+                  <p>This document was uploaded before cloud storage was enabled and can no longer be retrieved.</p>
+                  <p className="text-xs">Re-upload the invoice via Edit if you still have the original file.</p>
+                </>
+              ) : (
+                <p>Source document unavailable.</p>
+              )}
             </div>
           ) : grn.file_url.endsWith(".pdf") ? (
             <embed src={grn.file_url} className="h-[500px] w-full" />

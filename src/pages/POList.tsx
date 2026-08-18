@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { SkeletonTable } from "../components/Skeleton";
@@ -30,6 +30,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export function POList() {
+  const navigate = useNavigate();
   const { branches } = useAuth();
   const [pos, setPos] = useState<PO[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -109,19 +110,24 @@ export function POList() {
                 <th className="px-5 py-2 font-medium">Created</th>
                 <th className="px-5 py-2 font-medium">Expected delivery</th>
                 <th className="px-5 py-2 font-medium">Total</th>
+                <th className="px-5 py-2 font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {pos.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-6 text-center text-gray-400">No purchase orders yet.</td>
+                  <td colSpan={8} className="px-5 py-6 text-center text-gray-400">No purchase orders yet.</td>
                 </tr>
               )}
               {pos.map((po) => (
-                <tr key={po.id} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="px-5 py-2">
-                    <Link to={`/purchase-orders/${po.id}`} className="font-medium text-brand">{po.po_number}</Link>
-                  </td>
+                <tr
+                  key={po.id}
+                  onClick={() => navigate(`/purchase-orders/${po.id}`)}
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === "Enter" && navigate(`/purchase-orders/${po.id}`)}
+                  className="cursor-pointer border-b border-gray-50 outline-none hover:bg-gray-50 focus-visible:bg-gray-50"
+                >
+                  <td className="px-5 py-2 font-medium text-gray-900">{po.po_number}</td>
                   <td className="px-5 py-2">{po.branch_name}</td>
                   <td className="px-5 py-2">{po.vendor_name}</td>
                   <td className="px-5 py-2">
@@ -132,6 +138,11 @@ export function POList() {
                   <td className="px-5 py-2">{po.created_at?.slice(0, 10) ?? "-"}</td>
                   <td className="px-5 py-2">{po.expected_delivery_date?.slice(0, 10) ?? "-"}</td>
                   <td className="px-5 py-2">₹{Number(po.total_amount).toLocaleString("en-IN")}</td>
+                  <td className="px-5 py-2 text-gray-300">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </td>
                 </tr>
               ))}
             </tbody>

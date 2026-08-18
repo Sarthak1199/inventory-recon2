@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { GRNUploadPanel } from "../components/GRNUploadPanel";
@@ -33,6 +33,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export function GRNList() {
+  const navigate = useNavigate();
   const { branches } = useAuth();
   const [grns, setGrns] = useState<Grn[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -108,19 +109,24 @@ export function GRNList() {
                 <th className="px-5 py-2 font-medium">Created</th>
                 <th className="px-5 py-2 font-medium">Received date</th>
                 <th className="px-5 py-2 font-medium">Status</th>
+                <th className="px-5 py-2 font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {grns.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-5 py-6 text-center text-gray-400">No GRNs uploaded yet.</td>
+                  <td colSpan={9} className="px-5 py-6 text-center text-gray-400">No GRNs uploaded yet.</td>
                 </tr>
               )}
               {grns.map((g) => (
-                <tr key={g.id} className="border-b border-gray-50">
-                  <td className="px-5 py-2">
-                    <Link to={`/grns/${g.id}`} className="font-medium text-brand hover:underline">{g.grn_number ?? "-"}</Link>
-                  </td>
+                <tr
+                  key={g.id}
+                  onClick={() => navigate(`/grns/${g.id}`)}
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === "Enter" && navigate(`/grns/${g.id}`)}
+                  className="cursor-pointer border-b border-gray-50 outline-none hover:bg-gray-50 focus-visible:bg-gray-50"
+                >
+                  <td className="px-5 py-2 font-medium text-gray-900">{g.grn_number ?? "-"}</td>
                   <td className="px-5 py-2">{g.invoice_number ?? "(no invoice #)"}</td>
                   <td className="px-5 py-2">{g.branch_name}</td>
                   <td className="px-5 py-2">{g.vendor_name ?? "-"}</td>
@@ -131,6 +137,11 @@ export function GRNList() {
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[g.ocr_status] ?? ""}`}>
                       {g.ocr_status.replace("_", " ")}
                     </span>
+                  </td>
+                  <td className="px-5 py-2 text-gray-300">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </td>
                 </tr>
               ))}
