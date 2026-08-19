@@ -16,7 +16,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { DateRangeFilter, type DateRange } from "../components/DateRangeFilter";
 import { Skeleton, SkeletonTable } from "../components/Skeleton";
-import { AddBranchModal } from "../components/AddBranchModal";
+import { GRNUploadPanel } from "../components/GRNUploadPanel";
 import { MultiSelectFilter } from "../components/MultiSelectFilter";
 
 interface PriceTrend {
@@ -27,15 +27,14 @@ interface PriceTrend {
 interface Payable {
   vendorId: string;
   vendorName: string;
-  poCount: number;
+  grnCount: number;
   amountPayable: number;
 }
 
 interface PayableInvoice {
   vendorName: string;
-  poNumber: string;
-  createdAt: string;
-  status: string;
+  grnNumber: string;
+  invoiceDate: string;
   itemName: string;
   unit: string;
   qty: number;
@@ -81,9 +80,9 @@ function KpiPlaceholder({ title, icon }: { title: string; icon: ReactNode }) {
 }
 
 export function Dashboard() {
-  const { branches, refresh } = useAuth();
+  const { branches } = useAuth();
   const { showToast } = useToast();
-  const [showAddBranch, setShowAddBranch] = useState(false);
+  const [showAddGrn, setShowAddGrn] = useState(false);
   const [branchFilter, setBranchFilter] = useState<string[]>([]);
   const [vendorFilter, setVendorFilter] = useState<string[]>([]);
   const [grnFilter, setGrnFilter] = useState<string[]>([]);
@@ -96,15 +95,20 @@ export function Dashboard() {
   const [totalSpend, setTotalSpend] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const [skuVendorFilter, setSkuVendorFilter] = useState("");
   const [skuUniqueCount, setSkuUniqueCount] = useState(0);
   const [skuItems, setSkuItems] = useState<SkuItem[]>([]);
   const [skuLoading, setSkuLoading] = useState(true);
 
+  const [reloadKey, setReloadKey] = useState(0);
+
+  function reloadAll() {
+    setReloadKey((k) => k + 1);
+  }
+
   useEffect(() => {
     api.get("/vendors").then((res) => setVendors(res.data));
     api.get("/dashboard/grns").then((res) => setGrnOptions(res.data));
-  }, []);
+  }, [reloadKey]);
 
   useEffect(() => {
     const params: Record<string, string> = { branchId: branchFilter.length ? branchFilter.join(",") : "all" };
@@ -122,11 +126,11 @@ export function Dashboard() {
         setTotalSpend(payablesRes.data.totalSpend);
       })
       .finally(() => setLoading(false));
-  }, [branchFilter, vendorFilter, grnFilter, dateRange]);
+  }, [branchFilter, vendorFilter, grnFilter, dateRange, reloadKey]);
 
   useEffect(() => {
     const params: Record<string, string> = { branchId: branchFilter.length ? branchFilter.join(",") : "all" };
-    if (skuVendorFilter) params.vendorId = skuVendorFilter;
+    if (vendorFilter.length) params.vendorId = vendorFilter.join(",");
     if (grnFilter.length) params.grnId = grnFilter.join(",");
     if (dateRange.from) params.dateFrom = dateRange.from;
     if (dateRange.to) params.dateTo = dateRange.to;
@@ -139,17 +143,17 @@ export function Dashboard() {
         setSkuItems(res.data.items);
       })
       .finally(() => setSkuLoading(false));
-  }, [branchFilter, skuVendorFilter, grnFilter, dateRange]);
+  }, [branchFilter, vendorFilter, grnFilter, dateRange, reloadKey]);
 
   function downloadPayablesCsv() {
-    const header = "Vendor,PO Number,Created,Status,Item,Qty,Unit,Unit Price,Line Amount\n";
+    const header = "Vendor,GRN Number,Invoice Date,Item,Qty,Unit,Unit Price,Line Amount\n";
     const body = payableInvoices
       .map(
         (r) =>
-          `"${r.vendorName}","${r.poNumber}",${r.createdAt?.slice(0, 10)},${r.status},"${r.itemName}",${r.qty},${r.unit},${r.unitPrice.toFixed(2)},${r.lineAmount.toFixed(2)}`
+          `"${r.vendorName}","${r.grnNumber}",${r.invoiceDate?.slice(0, 10)},"${r.itemName}",${r.qty},${r.unit},${r.unitPrice.toFixed(2)},${r.lineAmount.toFixed(2)}`
       )
       .join("\n");
-    const footer = `\n"Total spend",,,,,,,,${totalSpend.toFixed(2)}`;
+    const footer = `\n"Total spend",,,,,,${totalSpend.toFixed(2)}`;
     const blob = new Blob([header + body + footer], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -161,13 +165,12 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {showAddBranch && (
-        <AddBranchModal
-          onClose={() => setShowAddBranch(false)}
-          onCreated={async (b) => {
-            await refresh();
-            setBranchFilter([b.id]);
-            showToast(`Branch "${b.name}" added.`);
+      {showAddGrn && (
+        <GRNUploadPanel
+          onClose={() => setShowAddGrn(false)}
+          onSaved={() => {
+            reloadAll();
+            showToast("GRN saved.");
           }}
         />
       )}
@@ -178,13 +181,13 @@ export function Dashboard() {
           <p className="mt-1 text-sm text-gray-500">GRN-inwarded items, prices, and spend — here is the overview.</p>
         </div>
         <button
-          onClick={() => setShowAddBranch(true)}
+          onClick={() => setShowAddGrn(true)}
           className="inline-flex items-center gap-2 rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Add branch
+          Add GRN
         </button>
       </div>
 
@@ -206,26 +209,15 @@ export function Dashboard() {
           options={grnOptions.map((g) => ({ id: g.id, label: g.label }))}
           selected={grnFilter}
           onChange={setGrnFilter}
+          searchable
         />
         <DateRangeFilter value={dateRange} onChange={setDateRange} />
       </div>
 
       <div className="rounded-2xl border border-gray-100 bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-3">
-          <div>
-            <h2 className="text-base font-semibold text-gray-900">Items received</h2>
-            <p className="text-xs text-gray-500">Unique SKUs received per vendor for this period, including off-PO items</p>
-          </div>
-          <select
-            value={skuVendorFilter}
-            onChange={(e) => setSkuVendorFilter(e.target.value)}
-            className="filter-select rounded-lg border border-gray-200 py-1.5 pl-3 text-sm"
-          >
-            <option value="">All vendors</option>
-            {vendors.map((v) => (
-              <option key={v.id} value={v.id}>{v.name}</option>
-            ))}
-          </select>
+        <div className="border-b border-gray-100 px-5 py-3">
+          <h2 className="text-base font-semibold text-gray-900">Items received</h2>
+          <p className="text-xs text-gray-500">Unique SKUs received for this period, including off-PO items</p>
         </div>
 
         {skuLoading ? (
@@ -251,7 +243,7 @@ export function Dashboard() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={skuItems.slice(0, 15).map((i) => ({
                     ...i,
-                    label: skuVendorFilter ? i.itemName : `${i.itemName} (${i.vendorName})`,
+                    label: vendorFilter.length > 0 ? i.itemName : `${i.itemName} (${i.vendorName})`,
                   }))} layout="vertical" margin={{ left: 24 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
@@ -306,7 +298,7 @@ export function Dashboard() {
           <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
             <div>
               <h2 className="text-base font-semibold text-gray-900">Vendor payables</h2>
-              <p className="text-xs text-gray-500">Money owed per vendor for open purchase orders, highest first</p>
+              <p className="text-xs text-gray-500">Total value received per vendor from confirmed GRNs, highest first</p>
             </div>
             <div className="flex items-center gap-4">
               <p className="text-sm font-semibold text-gray-900">Total spend: {fmtRs(totalSpend)}</p>
@@ -331,7 +323,7 @@ export function Dashboard() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex h-full items-center justify-center text-sm text-gray-400">No outstanding purchase orders for this filter.</div>
+              <div className="flex h-full items-center justify-center text-sm text-gray-400">No confirmed GRNs for this filter.</div>
             )}
           </div>
         </div>

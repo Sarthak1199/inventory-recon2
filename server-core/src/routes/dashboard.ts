@@ -48,21 +48,12 @@ function buildFilters(req: AuthedRequest, alias: string, dateExpr?: string) {
   return { where: conditions.join(" AND "), params };
 }
 
-/**
- * Applies the shared GRN multi-select filter (?grnId=a,b,c) on top of an existing
- * buildFilters() result. For alias "g" (a grns table) it filters g.id directly; for
- * alias "po" (purchase_orders, e.g. Vendor payables) it scopes to POs linked to the
- * selected GRNs, since a PO has no id of its own to match against.
- */
+/** Applies the shared GRN multi-select filter (?grnId=a,b,c) on top of an existing buildFilters() result. */
 function applyGrnFilter(req: AuthedRequest, alias: string, filters: { where: string; params: unknown[] }) {
   const grnIds = parseMultiId(req.query.grnId);
   if (grnIds.length === 0) return filters;
   const params = [...filters.params, grnIds];
-  const cond =
-    alias === "po"
-      ? `po.id IN (SELECT po_id FROM grns WHERE id = ANY($${params.length}) AND po_id IS NOT NULL)`
-      : `${alias}.id = ANY($${params.length})`;
-  return { where: `${filters.where} AND ${cond}`, params };
+  return { where: `${filters.where} AND ${alias}.id = ANY($${params.length})`, params };
 }
 
 /**
@@ -151,15 +142,15 @@ dashboardRouter.get("/sku-counts", requireAuth, async (req: AuthedRequest, res) 
 });
 
 dashboardRouter.get("/payables", requireAuth, async (req: AuthedRequest, res) => {
-  const filters = applyGrnFilter(req, "po", buildFilters(req, "po"));
+  const filters = applyGrnFilter(req, "g", buildFilters(req, "g", GRN_DATE));
 
   const result = await pool.query(
     `SELECT v.id AS vendor_id, v.name AS vendor_name,
-            COUNT(*)::int AS po_count,
-            COALESCE(SUM(po.total_amount), 0) AS amount_payable
-     FROM purchase_orders po
-     JOIN vendors v ON v.id = po.vendor_id
-     WHERE po.status IN ('sent', 'partially_received', 'received') AND ${filters.where}
+            COUNT(*)::int AS grn_count,
+            COALESCE(SUM(g.bill_total), 0) AS amount_payable
+     FROM grns g
+     JOIN vendors v ON v.id = g.vendor_id
+     WHERE g.ocr_status = 'confirmed' AND ${filters.where}
      GROUP BY v.id, v.name
      ORDER BY amount_payable DESC`,
     filters.params
@@ -168,32 +159,33 @@ dashboardRouter.get("/payables", requireAuth, async (req: AuthedRequest, res) =>
   const rows = result.rows.map((r: any) => ({
     vendorId: r.vendor_id,
     vendorName: r.vendor_name,
-    poCount: r.po_count,
+    grnCount: r.grn_count,
     amountPayable: Number(r.amount_payable),
   }));
 
-  const invoicesFilters = applyGrnFilter(req, "po", buildFilters(req, "po"));
+  const invoicesFilters = applyGrnFilter(req, "g", buildFilters(req, "g", GRN_DATE));
   const invoicesRes = await pool.query(
-    `SELECT v.name AS vendor_name, po.po_number, po.created_at, po.status,
-            i.name AS item_name, pl.ordered_qty, i.unit, pl.unit_price, pl.ordered_amount
-     FROM purchase_orders po
-     JOIN vendors v ON v.id = po.vendor_id
-     JOIN po_lines pl ON pl.po_id = po.id
-     JOIN items i ON i.id = pl.item_id
-     WHERE po.status IN ('sent', 'partially_received', 'received') AND ${invoicesFilters.where}
-     ORDER BY v.name, po.created_at DESC, i.name`,
+    `SELECT v.name AS vendor_name, COALESCE(g.grn_number, g.invoice_number, 'GRN') AS grn_number,
+            ${GRN_DATE} AS invoice_date,
+            COALESCE(i.name, gl.raw_item_name, 'Unmatched item') AS item_name,
+            gl.received_qty, i.unit, gl.unit_price, gl.received_amount
+     FROM grn_lines gl
+     JOIN grns g ON g.id = gl.grn_id
+     JOIN vendors v ON v.id = g.vendor_id
+     LEFT JOIN items i ON i.id = gl.item_id
+     WHERE g.ocr_status = 'confirmed' AND ${invoicesFilters.where}
+     ORDER BY v.name, g.created_at DESC, item_name`,
     invoicesFilters.params
   );
   const invoices = invoicesRes.rows.map((r: any) => ({
     vendorName: r.vendor_name,
-    poNumber: r.po_number,
-    createdAt: r.created_at,
-    status: r.status,
+    grnNumber: r.grn_number,
+    invoiceDate: r.invoice_date,
     itemName: r.item_name,
     unit: r.unit,
-    qty: Number(r.ordered_qty),
+    qty: Number(r.received_qty),
     unitPrice: Number(r.unit_price),
-    lineAmount: Number(r.ordered_amount),
+    lineAmount: Number(r.received_amount),
   }));
 
   const totalSpend = rows.reduce((s, r) => s + r.amountPayable, 0);
