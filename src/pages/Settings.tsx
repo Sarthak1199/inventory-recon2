@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { AddVendorModal } from "../components/AddVendorModal";
 import { AddBranchModal } from "../components/AddBranchModal";
+import { DeleteBranchModal } from "../components/DeleteBranchModal";
 import { SkeletonTable } from "../components/Skeleton";
 
 interface Branch {
@@ -54,6 +55,8 @@ export function Settings() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [showAddBranch, setShowAddBranch] = useState(false);
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
+  const [deleteBranchTarget, setDeleteBranchTarget] = useState<Branch | null>(null);
+  const [deleteBranchInfo, setDeleteBranchInfo] = useState<{ poCount: number; grnCount: number } | null>(null);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [showAddVendor, setShowAddVendor] = useState(false);
@@ -110,14 +113,20 @@ export function Settings() {
     showToast("Vendor removed.");
   }
 
-  async function deleteBranch(id: string) {
+  async function deleteBranch(branch: Branch) {
     try {
-      await api.delete(`/branches/${id}`);
+      await api.delete(`/branches/${branch.id}`);
       loadBranches();
       await refresh();
       showToast("Branch removed.");
     } catch (err: any) {
-      showToast(err?.response?.data?.error ?? "Failed to remove branch.", "error");
+      const data = err?.response?.data;
+      if (err?.response?.status === 409 && data?.needsResolution) {
+        setDeleteBranchTarget(branch);
+        setDeleteBranchInfo({ poCount: data.poCount, grnCount: data.grnCount });
+        return;
+      }
+      showToast(data?.error ?? "Failed to remove branch.", "error");
     }
   }
 
@@ -226,6 +235,24 @@ export function Settings() {
         />
       )}
 
+      {deleteBranchTarget && deleteBranchInfo && (
+        <DeleteBranchModal
+          branch={deleteBranchTarget}
+          otherBranches={branches.filter((b) => b.id !== deleteBranchTarget.id)}
+          poCount={deleteBranchInfo.poCount}
+          grnCount={deleteBranchInfo.grnCount}
+          onClose={() => {
+            setDeleteBranchTarget(null);
+            setDeleteBranchInfo(null);
+          }}
+          onDeleted={async () => {
+            loadBranches();
+            await refresh();
+            showToast("Branch removed.");
+          }}
+        />
+      )}
+
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
         <p className="mt-1 text-sm text-gray-500">Manage your branding, vendors, and item master here at any time.</p>
@@ -307,7 +334,7 @@ export function Settings() {
                   <button onClick={() => setEditingBranch(b)} className="text-xs text-brand hover:underline">
                     Edit
                   </button>
-                  <button onClick={() => deleteBranch(b.id)} className="text-xs text-red-500 hover:text-red-700">
+                  <button onClick={() => deleteBranch(b)} className="text-xs text-red-500 hover:text-red-700">
                     Remove
                   </button>
                 </div>

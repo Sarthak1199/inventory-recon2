@@ -65,23 +65,84 @@ branchesRouter.put("/:id", requireAuth, async (req: AuthedRequest, res) => {
 });
 
 branchesRouter.delete("/:id", requireAuth, async (req: AuthedRequest, res) => {
-  const branchCheck = await pool.query(`SELECT id FROM branches WHERE id = $1 AND account_id = $2`, [req.params.id, req.user!.accountId]);
+  const branchId = req.params.id;
+  const accountId = req.user!.accountId;
+  const { action, fallbackBranchId } = req.body ?? {};
+
+  const branchCheck = await pool.query(`SELECT id FROM branches WHERE id = $1 AND account_id = $2`, [branchId, accountId]);
   if (branchCheck.rowCount === 0) return res.status(404).json({ error: "Branch not found" });
 
   const [poCount, grnCount] = await Promise.all([
-    pool.query(`SELECT COUNT(*)::int AS cnt FROM purchase_orders WHERE branch_id = $1`, [req.params.id]),
-    pool.query(`SELECT COUNT(*)::int AS cnt FROM grns WHERE branch_id = $1`, [req.params.id]),
+    pool.query(`SELECT COUNT(*)::int AS cnt FROM purchase_orders WHERE branch_id = $1`, [branchId]),
+    pool.query(`SELECT COUNT(*)::int AS cnt FROM grns WHERE branch_id = $1`, [branchId]),
   ]);
   const poCnt = poCount.rows[0].cnt;
   const grnCnt = grnCount.rows[0].cnt;
-  if (poCnt > 0 || grnCnt > 0) {
+  const hasData = poCnt > 0 || grnCnt > 0;
+
+  // No PO/GRN history on this branch — delete outright, no popup needed.
+  if (!hasData) {
+    await pool.query(`UPDATE users SET last_branch_id = NULL WHERE last_branch_id = $1`, [branchId]);
+    await pool.query(`DELETE FROM branches WHERE id = $1`, [branchId]);
+    return res.status(204).end();
+  }
+
+  // Branch has data and the client hasn't said what to do with it yet — ask.
+  if (!action) {
     return res.status(409).json({
-      error: `Cannot delete: this branch has ${poCnt} purchase order(s) and ${grnCnt} GRN(s) on record.`,
+      needsResolution: true,
+      poCount: poCnt,
+      grnCount: grnCnt,
+      message: `This branch has ${poCnt} purchase order(s) and ${grnCnt} GRN(s) on record. Choose a fallback branch to move them to, or delete them.`,
     });
   }
 
-  await pool.query(`UPDATE users SET last_branch_id = NULL WHERE last_branch_id = $1`, [req.params.id]);
-  await pool.query(`DELETE FROM branches WHERE id = $1`, [req.params.id]);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    if (action === "reassign") {
+      if (!fallbackBranchId) throw Object.assign(new Error("fallbackBranchId is required to reassign"), { status: 400 });
+      if (fallbackBranchId === branchId) {
+        throw Object.assign(new Error("Fallback branch must be different from the branch being deleted"), { status: 400 });
+      }
+      const fallbackCheck = await client.query(`SELECT id FROM branches WHERE id = $1 AND account_id = $2`, [fallbackBranchId, accountId]);
+      if (fallbackCheck.rowCount === 0) throw Object.assign(new Error("Fallback branch not found"), { status: 404 });
+
+      await client.query(`UPDATE purchase_orders SET branch_id = $1 WHERE branch_id = $2`, [fallbackBranchId, branchId]);
+      await client.query(`UPDATE grns SET branch_id = $1 WHERE branch_id = $2`, [fallbackBranchId, branchId]);
+      await client.query(`UPDATE users SET last_branch_id = $1 WHERE last_branch_id = $2`, [fallbackBranchId, branchId]);
+      // Carry over anyone assigned to the old branch so they keep access via the fallback.
+      await client.query(
+        `INSERT INTO user_branches (user_id, branch_id)
+         SELECT user_id, $1 FROM user_branches WHERE branch_id = $2
+         ON CONFLICT DO NOTHING`,
+        [fallbackBranchId, branchId]
+      );
+    } else if (action === "delete_data") {
+      // A GRN on a different branch could still reference a PO that lives on this
+      // branch — detach those references before the PO rows disappear.
+      await client.query(
+        `UPDATE grns SET po_id = NULL WHERE po_id IN (SELECT id FROM purchase_orders WHERE branch_id = $1)`,
+        [branchId]
+      );
+      await client.query(`DELETE FROM grns WHERE branch_id = $1`, [branchId]);
+      await client.query(`DELETE FROM purchase_orders WHERE branch_id = $1`, [branchId]);
+      await client.query(`UPDATE users SET last_branch_id = NULL WHERE last_branch_id = $1`, [branchId]);
+    } else {
+      throw Object.assign(new Error("action must be 'reassign' or 'delete_data'"), { status: 400 });
+    }
+
+    await client.query(`DELETE FROM branches WHERE id = $1 AND account_id = $2`, [branchId, accountId]);
+    await client.query("COMMIT");
+  } catch (err: any) {
+    await client.query("ROLLBACK");
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    throw err;
+  } finally {
+    client.release();
+  }
+
   res.status(204).end();
 });
 
