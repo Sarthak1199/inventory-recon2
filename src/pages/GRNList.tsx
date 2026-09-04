@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { GRNUploadPanel } from "../components/GRNUploadPanel";
-import { DateRangeFilter, type DateRange } from "../components/DateRangeFilter";
+import { DateRangeFilter } from "../components/DateRangeFilter";
 import { SkeletonTable } from "../components/Skeleton";
+import { usePersistedFilters } from "../lib/usePersistedFilters";
 
 interface Grn {
   id: string;
@@ -37,9 +38,13 @@ export function GRNList() {
   const { branches } = useAuth();
   const [grns, setGrns] = useState<Grn[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [branchId, setBranchId] = useState("all");
-  const [vendorId, setVendorId] = useState("");
-  const [dateRange, setDateRange] = useState<DateRange>({ from: "", to: "" });
+  const [filters, setFilters] = usePersistedFilters({
+    branchId: "all",
+    vendorId: "",
+    dateFrom: "",
+    dateTo: "",
+  });
+  const { branchId, vendorId, dateFrom, dateTo } = filters;
   const [loading, setLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
 
@@ -50,8 +55,8 @@ export function GRNList() {
   function load() {
     const params: Record<string, string> = { branchId };
     if (vendorId) params.vendorId = vendorId;
-    if (dateRange.from) params.dateFrom = dateRange.from;
-    if (dateRange.to) params.dateTo = dateRange.to;
+    if (dateFrom) params.dateFrom = dateFrom;
+    if (dateTo) params.dateTo = dateTo;
     setLoading(true);
     api
       .get("/grns", { params })
@@ -59,7 +64,7 @@ export function GRNList() {
       .finally(() => setLoading(false));
   }
 
-  useEffect(load, [branchId, vendorId, dateRange]);
+  useEffect(load, [branchId, vendorId, dateFrom, dateTo]);
 
   return (
     <div className="space-y-4">
@@ -79,19 +84,23 @@ export function GRNList() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="filter-select rounded-lg border border-gray-200 py-1.5 pl-3 text-sm">
+        <select value={branchId} onChange={(e) => setFilters({ branchId: e.target.value })} className="filter-select rounded-lg border border-gray-200 py-1.5 pl-3 text-sm">
           <option value="all">All branches</option>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>{b.name}</option>
           ))}
         </select>
-        <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="filter-select rounded-lg border border-gray-200 py-1.5 pl-3 text-sm">
+        <select value={vendorId} onChange={(e) => setFilters({ vendorId: e.target.value })} className="filter-select rounded-lg border border-gray-200 py-1.5 pl-3 text-sm">
           <option value="">All vendors</option>
           {vendors.map((v) => (
             <option key={v.id} value={v.id}>{v.name}</option>
           ))}
         </select>
-        <DateRangeFilter value={dateRange} onChange={setDateRange} label="Created at" />
+        <DateRangeFilter
+          value={{ from: dateFrom, to: dateTo }}
+          onChange={(range) => setFilters({ dateFrom: range.from, dateTo: range.to })}
+          label="Invoice date"
+        />
       </div>
 
       {loading ? (
@@ -106,7 +115,7 @@ export function GRNList() {
                 <th className="px-5 py-2 font-medium">Branch</th>
                 <th className="px-5 py-2 font-medium">Vendor</th>
                 <th className="px-5 py-2 font-medium">Linked PO</th>
-                <th className="px-5 py-2 font-medium">Created</th>
+                <th className="px-5 py-2 font-medium">Invoice date</th>
                 <th className="px-5 py-2 font-medium">Received date</th>
                 <th className="px-5 py-2 font-medium">Status</th>
                 <th className="px-5 py-2 font-medium"></th>
@@ -131,7 +140,7 @@ export function GRNList() {
                   <td className="px-5 py-2">{g.branch_name}</td>
                   <td className="px-5 py-2">{g.vendor_name ?? "-"}</td>
                   <td className="px-5 py-2">{g.po_number ?? "Off-PO"}</td>
-                  <td className="px-5 py-2">{g.created_at?.slice(0, 10) ?? "-"}</td>
+                  <td className="px-5 py-2">{g.invoice_date?.slice(0, 10) ?? "-"}</td>
                   <td className="px-5 py-2">{g.received_date?.slice(0, 10) ?? "-"}</td>
                   <td className="px-5 py-2">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[g.ocr_status] ?? ""}`}>

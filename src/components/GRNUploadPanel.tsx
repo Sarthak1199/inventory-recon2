@@ -183,6 +183,10 @@ export function GRNUploadPanel({
       setError("Select a branch.");
       return;
     }
+    if (invoiceDate && invoiceDate > new Date().toISOString().slice(0, 10)) {
+      setError("Invoice date cannot be in the future.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -314,7 +318,13 @@ export function GRNUploadPanel({
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Invoice date</label>
-                <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm" />
+                <input
+                  type="date"
+                  value={invoiceDate}
+                  max={new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => setInvoiceDate(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm"
+                />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Received date</label>

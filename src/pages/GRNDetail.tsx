@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useToast } from "../context/ToastContext";
 import { WhatsAppSendCard } from "../components/WhatsAppSendCard";
@@ -252,9 +252,9 @@ export function GRNDetail() {
         </div>
       </div>
 
-      <Link to="/grns" className="inline-block text-sm text-brand">
+      <button type="button" onClick={() => navigate(-1)} className="inline-block text-sm text-brand">
         Back to GRNs
-      </Link>
+      </button>
     </div>
   );
 }

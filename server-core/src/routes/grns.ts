@@ -130,11 +130,11 @@ grnsRouter.get("/", requireAuth, async (req: AuthedRequest, res) => {
   }
   if (dateFrom) {
     params.push(dateFrom);
-    conditions.push(`g.created_at >= $${params.length}`);
+    conditions.push(`g.invoice_date >= $${params.length}`);
   }
   if (dateTo) {
     params.push(dateTo);
-    conditions.push(`g.created_at <= $${params.length}`);
+    conditions.push(`g.invoice_date <= $${params.length}`);
   }
 
   const result = await pool.query(
@@ -145,7 +145,7 @@ grnsRouter.get("/", requireAuth, async (req: AuthedRequest, res) => {
      LEFT JOIN vendors v ON v.id = g.vendor_id
      JOIN branches b ON b.id = g.branch_id
      WHERE ${conditions.join(" AND ")}
-     ORDER BY g.created_at DESC`,
+     ORDER BY g.invoice_date DESC NULLS LAST, g.created_at DESC`,
     params
   );
   res.json(result.rows);
@@ -233,6 +233,9 @@ grnsRouter.post("/:id/share-wa", requireAuth, async (req: AuthedRequest, res) =>
 grnsRouter.put("/:id/review", requireAuth, async (req: AuthedRequest, res) => {
   const { invoiceNumber, invoiceDate, receivedDate, poId, vendorId, branchId, lines } = req.body ?? {};
   if (!Array.isArray(lines)) return res.status(400).json({ error: "lines array is required" });
+  if (invoiceDate && invoiceDate > new Date().toISOString().slice(0, 10)) {
+    return res.status(400).json({ error: "Invoice date cannot be in the future." });
+  }
 
   const grnCheck = await pool.query(`SELECT id FROM grns WHERE id = $1 AND account_id = $2`, [req.params.id, req.user!.accountId]);
   if (grnCheck.rowCount === 0) return res.status(404).json({ error: "GRN not found" });
