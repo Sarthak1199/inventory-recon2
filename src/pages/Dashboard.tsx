@@ -1,6 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
 import {
-  Legend,
   Tooltip,
   ResponsiveContainer,
   LineChart,
@@ -67,6 +66,31 @@ function fmtRs(v: number) {
 }
 
 const LINE_COLORS = ["#4f46e5", "#e11d48", "#f59e0b", "#10b981", "#0ea5e9", "#a855f7", "#64748b"];
+const MAX_PRICE_TREND_LEGEND_ITEMS = 5;
+
+/**
+ * Every SKU still gets its own <Line> (so the tooltip shows all of them on
+ * hover) — this only limits the names listed in the legend row rendered
+ * above the chart, since with dozens of SKUs Recharts' own inline Legend
+ * wraps to enough rows to squeeze the plot itself down to nothing. Ranks by
+ * number of weeks with data, so lines with an actual trend to show (not a
+ * single stray data point) surface first.
+ */
+function topPriceTrendLegend(priceTrend: PriceTrend) {
+  const weeksWithData = new Map<string, number>();
+  for (const name of priceTrend.itemNames) weeksWithData.set(name, 0);
+  for (const point of priceTrend.series) {
+    for (const name of priceTrend.itemNames) {
+      if (point[name] !== undefined) weeksWithData.set(name, (weeksWithData.get(name) ?? 0) + 1);
+    }
+  }
+
+  return priceTrend.itemNames
+    .map((name, i) => ({ name, color: LINE_COLORS[i % LINE_COLORS.length], weeks: weeksWithData.get(name) ?? 0 }))
+    .sort((a, b) => b.weeks - a.weeks)
+    .slice(0, MAX_PRICE_TREND_LEGEND_ITEMS)
+    .map((item) => ({ value: item.name, type: "line" as const, color: item.color }));
+}
 
 function KpiPlaceholder({ title, icon }: { title: string; icon: ReactNode }) {
   return (
@@ -270,6 +294,21 @@ export function Dashboard() {
               <p className="text-xs text-gray-500">Week on week received GRN price per SKU</p>
             </div>
           </div>
+          {priceTrend && priceTrend.itemNames.length > 0 && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-gray-50 px-5 py-2.5 text-xs text-gray-600">
+              {topPriceTrendLegend(priceTrend).map((item) => (
+                <span key={item.value} className="inline-flex items-center gap-1.5">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+                  {item.value}
+                </span>
+              ))}
+              {priceTrend.itemNames.length > MAX_PRICE_TREND_LEGEND_ITEMS && (
+                <span className="text-gray-400">
+                  +{priceTrend.itemNames.length - MAX_PRICE_TREND_LEGEND_ITEMS} more — hover the chart to see them
+                </span>
+              )}
+            </div>
+          )}
           <div className="h-72 p-4">
             {priceTrend && priceTrend.series.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -278,7 +317,6 @@ export function Dashboard() {
                   <XAxis dataKey="week" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
                   {priceTrend.itemNames.map((name, i) => (
                     <Line key={name} type="monotone" dataKey={name} stroke={LINE_COLORS[i % LINE_COLORS.length]} connectNulls dot={{ r: 3 }} />
                   ))}
