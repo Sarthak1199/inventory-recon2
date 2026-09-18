@@ -145,7 +145,8 @@ grnsRouter.get("/", requireAuth, async (req: AuthedRequest, res) => {
      LEFT JOIN vendors v ON v.id = g.vendor_id
      JOIN branches b ON b.id = g.branch_id
      WHERE ${conditions.join(" AND ")}
-     ORDER BY g.invoice_date DESC NULLS LAST, g.created_at DESC`,
+     ORDER BY g.invoice_date DESC NULLS LAST, g.created_at DESC
+     LIMIT 500`,
     params
   );
   res.json(result.rows);

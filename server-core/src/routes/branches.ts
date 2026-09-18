@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { pool } from "../../db/pool.js";
-import { requireAuth, type AuthedRequest } from "../middleware/auth.js";
+import { requireAuth, refreshSessionBranches, type AuthedRequest } from "../middleware/auth.js";
 
 export const branchesRouter = Router();
 
@@ -30,6 +30,7 @@ branchesRouter.post("/", requireAuth, async (req: AuthedRequest, res) => {
     const branch = branchRes.rows[0];
     await client.query(`INSERT INTO user_branches (user_id, branch_id) VALUES ($1, $2)`, [req.user!.id, branch.id]);
     await client.query("COMMIT");
+    await refreshSessionBranches(req);
     res.status(201).json(branch);
   } catch (err: any) {
     await client.query("ROLLBACK");
@@ -84,6 +85,7 @@ branchesRouter.delete("/:id", requireAuth, async (req: AuthedRequest, res) => {
   if (!hasData) {
     await pool.query(`UPDATE users SET last_branch_id = NULL WHERE last_branch_id = $1`, [branchId]);
     await pool.query(`DELETE FROM branches WHERE id = $1`, [branchId]);
+    await refreshSessionBranches(req);
     return res.status(204).end();
   }
 
@@ -143,18 +145,16 @@ branchesRouter.delete("/:id", requireAuth, async (req: AuthedRequest, res) => {
     client.release();
   }
 
+  await refreshSessionBranches(req);
   res.status(204).end();
 });
 
 /** Sets the branch switcher's chosen branch as the user's last-used default. */
 branchesRouter.post("/switch", requireAuth, async (req: AuthedRequest, res) => {
   const { branchId } = req.body ?? {};
-  const assigned = await pool.query(
-    `SELECT 1 FROM user_branches WHERE user_id = $1 AND branch_id = $2`,
-    [req.user!.id, branchId]
-  );
-  if (!assigned.rowCount) return res.status(403).json({ error: "Not assigned to this branch" });
+  if (!req.session.branchIds?.includes(branchId)) return res.status(403).json({ error: "Not assigned to this branch" });
 
   await pool.query(`UPDATE users SET last_branch_id = $1 WHERE id = $2`, [branchId, req.user!.id]);
+  req.session.lastBranchId = branchId;
   res.json({ activeBranchId: branchId });
 });

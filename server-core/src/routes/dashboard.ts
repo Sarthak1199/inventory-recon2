@@ -143,18 +143,34 @@ dashboardRouter.get("/sku-counts", requireAuth, async (req: AuthedRequest, res) 
 
 dashboardRouter.get("/payables", requireAuth, async (req: AuthedRequest, res) => {
   const filters = applyGrnFilter(req, "g", buildFilters(req, "g", GRN_DATE));
+  const invoicesFilters = applyGrnFilter(req, "g", buildFilters(req, "g", GRN_DATE));
 
-  const result = await pool.query(
-    `SELECT v.id AS vendor_id, v.name AS vendor_name,
-            COUNT(*)::int AS grn_count,
-            COALESCE(SUM(g.bill_total), 0) AS amount_payable
-     FROM grns g
-     JOIN vendors v ON v.id = g.vendor_id
-     WHERE g.ocr_status = 'confirmed' AND ${filters.where}
-     GROUP BY v.id, v.name
-     ORDER BY amount_payable DESC`,
-    filters.params
-  );
+  const [result, invoicesRes] = await Promise.all([
+    pool.query(
+      `SELECT v.id AS vendor_id, v.name AS vendor_name,
+              COUNT(*)::int AS grn_count,
+              COALESCE(SUM(g.bill_total), 0) AS amount_payable
+       FROM grns g
+       JOIN vendors v ON v.id = g.vendor_id
+       WHERE g.ocr_status = 'confirmed' AND ${filters.where}
+       GROUP BY v.id, v.name
+       ORDER BY amount_payable DESC`,
+      filters.params
+    ),
+    pool.query(
+      `SELECT v.name AS vendor_name, COALESCE(g.grn_number, g.invoice_number, 'GRN') AS grn_number,
+              ${GRN_DATE} AS invoice_date,
+              COALESCE(i.name, gl.raw_item_name, 'Unmatched item') AS item_name,
+              gl.received_qty, i.unit, gl.unit_price, gl.received_amount
+       FROM grn_lines gl
+       JOIN grns g ON g.id = gl.grn_id
+       JOIN vendors v ON v.id = g.vendor_id
+       LEFT JOIN items i ON i.id = gl.item_id
+       WHERE g.ocr_status = 'confirmed' AND ${invoicesFilters.where}
+       ORDER BY v.name, g.created_at DESC, item_name`,
+      invoicesFilters.params
+    ),
+  ]);
 
   const rows = result.rows.map((r: any) => ({
     vendorId: r.vendor_id,
@@ -162,21 +178,6 @@ dashboardRouter.get("/payables", requireAuth, async (req: AuthedRequest, res) =>
     grnCount: r.grn_count,
     amountPayable: Number(r.amount_payable),
   }));
-
-  const invoicesFilters = applyGrnFilter(req, "g", buildFilters(req, "g", GRN_DATE));
-  const invoicesRes = await pool.query(
-    `SELECT v.name AS vendor_name, COALESCE(g.grn_number, g.invoice_number, 'GRN') AS grn_number,
-            ${GRN_DATE} AS invoice_date,
-            COALESCE(i.name, gl.raw_item_name, 'Unmatched item') AS item_name,
-            gl.received_qty, i.unit, gl.unit_price, gl.received_amount
-     FROM grn_lines gl
-     JOIN grns g ON g.id = gl.grn_id
-     JOIN vendors v ON v.id = g.vendor_id
-     LEFT JOIN items i ON i.id = gl.item_id
-     WHERE g.ocr_status = 'confirmed' AND ${invoicesFilters.where}
-     ORDER BY v.name, g.created_at DESC, item_name`,
-    invoicesFilters.params
-  );
   const invoices = invoicesRes.rows.map((r: any) => ({
     vendorName: r.vendor_name,
     grnNumber: r.grn_number,

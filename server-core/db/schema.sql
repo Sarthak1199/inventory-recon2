@@ -92,6 +92,7 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
 CREATE INDEX IF NOT EXISTS idx_po_account_branch ON purchase_orders(account_id, branch_id);
 CREATE INDEX IF NOT EXISTS idx_po_vendor ON purchase_orders(vendor_id);
 CREATE INDEX IF NOT EXISTS idx_po_status ON purchase_orders(status);
+CREATE INDEX IF NOT EXISTS idx_po_account_created ON purchase_orders(account_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS po_lines (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -125,6 +126,9 @@ CREATE TABLE IF NOT EXISTS grns (
 );
 CREATE INDEX IF NOT EXISTS idx_grn_account_branch ON grns(account_id, branch_id);
 CREATE INDEX IF NOT EXISTS idx_grn_po ON grns(po_id);
+CREATE INDEX IF NOT EXISTS idx_grn_vendor ON grns(vendor_id);
+CREATE INDEX IF NOT EXISTS idx_grn_ocr_status ON grns(ocr_status);
+CREATE INDEX IF NOT EXISTS idx_grn_account_invoice_date ON grns(account_id, invoice_date DESC);
 ALTER TABLE grns ADD COLUMN IF NOT EXISTS grn_number TEXT;
 ALTER TABLE grns ADD COLUMN IF NOT EXISTS subtotal_amount NUMERIC(14,2);
 ALTER TABLE grns ADD COLUMN IF NOT EXISTS total_cgst NUMERIC(14,2);

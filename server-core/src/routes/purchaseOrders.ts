@@ -76,7 +76,8 @@ purchaseOrdersRouter.get("/", requireAuth, async (req: AuthedRequest, res) => {
      JOIN vendors v ON v.id = po.vendor_id
      JOIN branches b ON b.id = po.branch_id
      WHERE ${conditions.join(" AND ")}
-     ORDER BY po.created_at DESC`,
+     ORDER BY po.created_at DESC
+     LIMIT 500`,
     params
   );
   res.json(result.rows);

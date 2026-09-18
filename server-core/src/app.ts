@@ -26,7 +26,9 @@ app.use(cors({ origin: process.env.CLIENT_ORIGIN || true, credentials: true }));
 app.use(express.json());
 app.use(
   session({
-    store: new PgSession({ pool, createTableIfMissing: true }),
+    // The session table has existed since the first deploy; skipping the
+    // existence check saves a DB round trip on every cold start.
+    store: new PgSession({ pool, createTableIfMissing: false }),
     secret: process.env.SESSION_SECRET ?? "dev_secret",
     resave: false,
     saveUninitialized: false,

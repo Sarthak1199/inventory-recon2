@@ -42,6 +42,11 @@ authRouter.post("/signup", async (req, res) => {
     await client.query("COMMIT");
 
     req.session.userId = userId;
+    req.session.accountId = accountId;
+    req.session.name = name;
+    req.session.email = email;
+    req.session.branchIds = [branchId];
+    req.session.lastBranchId = branchId;
     res.status(201).json({ id: userId, email, name, accountId });
   } catch (err) {
     await client.query("ROLLBACK");
@@ -56,7 +61,7 @@ authRouter.post("/login", async (req, res) => {
   if (!email || !password) return res.status(400).json({ error: "email and password are required" });
 
   const userRes = await pool.query(
-    `SELECT id, password_hash, name, account_id FROM users WHERE email = $1`,
+    `SELECT id, password_hash, name, account_id, last_branch_id FROM users WHERE email = $1`,
     [email]
   );
   if (userRes.rowCount === 0) return res.status(401).json({ error: "Invalid credentials" });
@@ -65,7 +70,14 @@ authRouter.post("/login", async (req, res) => {
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) return res.status(401).json({ error: "Invalid credentials" });
 
+  const branchRes = await pool.query(`SELECT branch_id FROM user_branches WHERE user_id = $1`, [user.id]);
+
   req.session.userId = user.id;
+  req.session.accountId = user.account_id;
+  req.session.name = user.name;
+  req.session.email = email;
+  req.session.branchIds = branchRes.rows.map((r) => r.branch_id);
+  req.session.lastBranchId = user.last_branch_id;
   res.json({ id: user.id, email, name: user.name, accountId: user.account_id });
 });
 
@@ -74,16 +86,18 @@ authRouter.post("/logout", (req, res) => {
 });
 
 authRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
-  const account = await pool.query(
-    `SELECT id, name, brand_name, logo_url, brand_hex_color, onboarding_status, quest_dismissed FROM accounts WHERE id = $1`,
-    [req.user!.accountId]
-  );
-  const branches = await pool.query(
-    `SELECT b.id, b.name, b.code FROM branches b
-     JOIN user_branches ub ON ub.branch_id = b.id
-     WHERE ub.user_id = $1 ORDER BY b.name`,
-    [req.user!.id]
-  );
+  const [account, branches] = await Promise.all([
+    pool.query(
+      `SELECT id, name, brand_name, logo_url, brand_hex_color, onboarding_status, quest_dismissed FROM accounts WHERE id = $1`,
+      [req.user!.accountId]
+    ),
+    pool.query(
+      `SELECT b.id, b.name, b.code FROM branches b
+       JOIN user_branches ub ON ub.branch_id = b.id
+       WHERE ub.user_id = $1 ORDER BY b.name`,
+      [req.user!.id]
+    ),
+  ]);
   res.json({
     user: req.user,
     account: account.rows[0],
